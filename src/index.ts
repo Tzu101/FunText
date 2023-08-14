@@ -6,6 +6,6 @@ export class FunText {
   }
 
   go() {
-    return "FunText: " + this.text;
+    return "FunText: " + this.text + "Package test";
   }
 }

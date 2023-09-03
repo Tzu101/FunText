@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FunText Test</title>
+  </head>
+  <body>
+    <div id="container">Hello world, test</div>
+
+    <script>
+      var exports = {};
+    </script>
+    <script src="/lib/index.js"></script>
+    <script>
+      const container = document.getElementById("container");
+      let funtext = new FunText(container, [], { text: "Test test TEST" });
+
+      funtext.mount();
+    </script>
+
+    <style>
+      #container::shadow * {
+        display: none;
+      }
+    </style>
+  </body>
+</html>

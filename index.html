@@ -15,7 +15,19 @@
     <script src="/lib/index.js"></script>
     <script>
       const container = document.getElementById("container");
-      let funtext = new FunText(container, [], { text: "Test test TEST" });
+      let funtext = new FunText(
+        container,
+        [
+          {
+            scope: "letter",
+            type: "color",
+            steps: ["red", "blue"],
+            iteration: "infinite",
+            direction: "alternate",
+          },
+        ],
+        { text: "Test test TEST" },
+      );
 
       funtext.mount();
     </script>

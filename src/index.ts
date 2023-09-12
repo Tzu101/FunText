@@ -1,8 +1,12 @@
 import type {
   Options,
   AnimationType,
+  AnimationSteps,
+  AnimationSync,
   Animation,
+  CompiledAnimationSteps,
   CompiledAnimation,
+  CompiledAnimations,
 } from "./types";
 
 export class FunText {
@@ -48,16 +52,14 @@ export class FunText {
   */
 
   // CONSTANTS
+  private static readonly KEYFRAME = "funtext-keyframe";
   private static readonly CLASS = "funtext";
   private static readonly WORD_CLASS = "funtext__word";
-  private static readonly WORD_KEYFRAME = "funtext-word-keyframes";
   private static readonly LETTER_CLASS = "funtext__letter";
-  private static readonly LETTER_KEYFRAME = "funtext-letter-keyframes";
   private static readonly DIVIDER_CLASS = "funtext__divider";
 
   private static readonly DEFAULT_ANIMATION = {
     offset: 0.5,
-    duration: 1,
     delay: 0,
     iteration: "1",
     direction: "normal",
@@ -65,34 +67,143 @@ export class FunText {
     fill: "none",
   };
 
-  private static readonly ANIMATION_TYPE_TARGET = {
+  private static readonly ANIMATED_PROPERTY: {
+    [key in AnimationType]: string;
+  } = {
+    horizontal: "translate",
+    vertical: "translate",
     color: "color",
+    background: "background-color",
     opacity: "opacity",
+    scale: "scale",
+    rotate: "rotate",
+  };
+
+  private static readonly ANIMATED_PROPERTY_DEFAULT: {
+    [key in AnimationType]: string;
+  } = {
+    horizontal: "0",
+    vertical: "0",
+    color: "inherit",
+    background: "inherit",
+    opacity: "inherit",
+    scale: "1",
+    rotate: "0",
   };
 
   // UTILITY
-  private static getAnimatedProperty(type: string): string {
-    switch (type) {
-      case "color":
-        return "color";
-      case "opacity":
-        return "opacity";
-      default:
-        return "none";
-    }
+  private static buildKeyframeStep(
+    type: AnimationType,
+    percent: number,
+    value: string,
+  ): string {
+    return `${percent}% { ${FunText.ANIMATED_PROPERTY[type]}: ${value} }`;
   }
 
-  private static getKeyframeStep(type: string, step: string): string {
-    return `${FunText.getAnimatedProperty(type)}: ${step}`;
+  private static buildKeyframes(
+    names: string[],
+    keyframeSteps: string[],
+  ): string[] {
+    const keyframes: string[] = [];
+
+    for (let n = 0; n < names.length; n++) {
+      keyframes.push(`@keyframes ${names[n]} { ${keyframeSteps.join("\n")} }`);
+    }
+
+    return keyframes;
+  }
+
+  private static compileSteps(steps: AnimationSteps): CompiledAnimationSteps {
+    if (typeof steps === "string") {
+      return {
+        100: steps,
+      };
+    } else if (Array.isArray(steps)) {
+      if (steps.length === 0) {
+        return {};
+      }
+
+      const compiledSteps: CompiledAnimationSteps = {};
+      const stepInterval = 100 / (steps.length - 1);
+
+      for (let step = 0; step < steps.length; step++) {
+        const stepPercentage = Math.min(step * stepInterval, 100);
+        compiledSteps[stepPercentage] = steps[step];
+      }
+
+      return compiledSteps;
+    }
+    return { ...steps };
+  }
+
+  private static syncSteps(
+    steps: CompiledAnimationSteps,
+    sync: AnimationSync,
+    duration: number,
+    type: AnimationType,
+  ): CompiledAnimationSteps {
+    const durationRatio = duration / sync.duration;
+    if (durationRatio >= 1) {
+      return steps;
+    }
+
+    let syncLocation = 0;
+    if (typeof sync.location === "number") {
+      syncLocation = sync.location;
+
+      const maxSyncLocation = 100 - 100 * (1 - durationRatio);
+      syncLocation = Math.min(syncLocation, maxSyncLocation);
+    } else {
+      if (sync.location === "end") {
+        const maxSyncLocation = 100 - 100 * (1 - durationRatio);
+        syncLocation = maxSyncLocation;
+      } else if (sync.location === "middle") {
+        syncLocation = (100 * (1 - durationRatio)) / 2;
+      } else {
+        syncLocation = 0;
+      }
+    }
+
+    const syncedSteps: CompiledAnimationSteps = {};
+    let minStep = 100;
+    let maxStep = 0;
+    for (const stepPercent of Object.keys(steps)) {
+      const stepPercentNum = Number(stepPercent);
+      const syncedStepPercent =
+        (stepPercentNum * duration) / sync.duration + syncLocation;
+      syncedSteps[syncedStepPercent] = steps[stepPercentNum];
+
+      minStep = Math.min(minStep, syncedStepPercent);
+      maxStep = Math.max(maxStep, syncedStepPercent);
+    }
+
+    syncedSteps[minStep - 0.01] = FunText.ANIMATED_PROPERTY_DEFAULT[type];
+    syncedSteps[maxStep + 0.01] = FunText.ANIMATED_PROPERTY_DEFAULT[type];
+
+    return syncedSteps;
   }
 
   private static compileAnimation(animation: Animation): CompiledAnimation {
+    let steps = FunText.compileSteps(animation.steps);
+    console.log(steps);
+
+    let duration = animation.duration;
+    if (animation.sync) {
+      steps = FunText.syncSteps(
+        steps,
+        animation.sync,
+        duration,
+        animation.type,
+      );
+      duration = animation.sync.duration;
+      console.log(steps);
+    }
+
     return {
-      scope: animation.scope,
       type: animation.type,
-      steps: animation.steps,
+      steps,
       offset: animation.offset ?? FunText.DEFAULT_ANIMATION.offset,
-      duration: animation.duration ?? FunText.DEFAULT_ANIMATION.duration,
+      duration: duration,
       delay: animation.delay ?? FunText.DEFAULT_ANIMATION.delay,
       iteration:
         `${animation.iteration}` ?? FunText.DEFAULT_ANIMATION.iteration,
@@ -102,23 +213,35 @@ export class FunText {
     };
   }
 
-  // CSS
-  private static createStyle(
-    html: HTMLElement,
+  private static compileAnimations(
     animations: Animation[],
-  ): HTMLStyleElement {
-    const wordAnimations: CompiledAnimation[] = [];
-    const letterAnimations: CompiledAnimation[] = [];
+  ): CompiledAnimations {
+    const wordAnimatons: CompiledAnimation[] = [];
+    const letterAnimatons: CompiledAnimation[] = [];
+
     for (const animation of animations) {
+      const compiledAnimation = FunText.compileAnimation(animation);
+
       if (animation.scope === "word") {
-        wordAnimations.push(FunText.compileAnimation(animation));
+        wordAnimatons.push(compiledAnimation);
       } else {
-        letterAnimations.push(FunText.compileAnimation(animation));
+        letterAnimatons.push(compiledAnimation);
       }
     }
 
-    const wordFrom: string[] = [];
-    const wordTo: string[] = [];
+    return {
+      word: wordAnimatons,
+      letter: letterAnimatons,
+    };
+  }
+
+  // CSS
+  private static createStyle(
+    html: HTMLElement,
+    compiledAnimatons: CompiledAnimations,
+  ): HTMLStyleElement {
+    const wordKeyframeNames: string[] = [];
+    const wordKeyframeSteps: string[] = [];
     const wordDuration: string[] = [];
     const wordDelay: string[] = [];
     const wordIteration: string[] = [];
@@ -126,23 +249,33 @@ export class FunText {
     const wordTiming: string[] = [];
     const wordFill: string[] = [];
 
-    for (const wordAnimation of wordAnimations) {
-      wordFrom.push(
-        FunText.getKeyframeStep(wordAnimation.type, wordAnimation.steps[0]),
-      );
-      wordTo.push(
-        FunText.getKeyframeStep(wordAnimation.type, wordAnimation.steps[1]),
-      );
+    for (const wordAnimation of compiledAnimatons.word) {
+      wordKeyframeNames.push(`${FunText.KEYFRAME}-${wordAnimation.type}`);
+
+      let wordKeyframe = "";
+      for (const stepPercent of Object.keys(wordAnimation.steps)) {
+        const stepPercentNum = Number(stepPercent);
+        const stepValue = wordAnimation.steps[stepPercentNum];
+        wordKeyframe += FunText.buildKeyframeStep(
+          wordAnimation.type,
+          stepPercentNum,
+          stepValue,
+        );
+      }
+      wordKeyframeSteps.push(wordKeyframe);
+
       wordDuration.push(`${wordAnimation.duration}s`);
-      wordDelay.push(`${wordAnimation.delay}s`);
+      wordDelay.push(
+        `calc(${wordAnimation.delay}s + var(--offset-${wordAnimation.type}))`,
+      );
       wordIteration.push(wordAnimation.iteration);
       wordDirection.push(wordAnimation.direction);
       wordTiming.push(wordAnimation.timing);
       wordFill.push(wordAnimation.fill);
     }
 
-    const letterFrom: string[] = [];
-    const letterTo: string[] = [];
+    const letterKeyframeNames: string[] = [];
+    const letterKeyframeSteps: string[] = [];
     const letterDuration: string[] = [];
     const letterDelay: string[] = [];
     const letterIteration: string[] = [];
@@ -150,13 +283,21 @@ export class FunText {
     const letterTiming: string[] = [];
     const letterFill: string[] = [];
 
-    for (const letterAnimation of letterAnimations) {
-      letterFrom.push(
-        FunText.getKeyframeStep(letterAnimation.type, letterAnimation.steps[0]),
-      );
-      letterTo.push(
-        FunText.getKeyframeStep(letterAnimation.type, letterAnimation.steps[1]),
-      );
+    for (const letterAnimation of compiledAnimatons.letter) {
+      letterKeyframeNames.push(`${FunText.KEYFRAME}-${letterAnimation.type}`);
+
+      let letterKeyframe = "";
+      for (const stepPercent of Object.keys(letterAnimation.steps)) {
+        const stepPercentNum = Number(stepPercent);
+        const stepValue = letterAnimation.steps[stepPercentNum];
+        letterKeyframe += FunText.buildKeyframeStep(
+          letterAnimation.type,
+          stepPercentNum,
+          stepValue,
+        );
+      }
+      letterKeyframeSteps.push(letterKeyframe);
+
       letterDuration.push(`${letterAnimation.duration}s`);
       letterDelay.push(
         `calc(${letterAnimation.delay}s + var(--offset-${letterAnimation.type}))`,
@@ -174,14 +315,14 @@ export class FunText {
       background: 0,
       opacity: 0,
       scale: 0,
-      rotation: 0,
+      rotate: 0,
     };
 
     for (let wordIndex = 0; wordIndex < html.children.length; wordIndex++) {
       const word = html.children[wordIndex];
       const wordInlineStyle: string[] = [];
 
-      for (const wordAnimation of wordAnimations) {
+      for (const wordAnimation of compiledAnimatons.word) {
         wordInlineStyle.push(
           `--offset-${wordAnimation.type}: ${
             animationOffset[wordAnimation.type]
@@ -200,7 +341,7 @@ export class FunText {
         const letter = word.children[letterIndex];
         const letterInlineStyle: string[] = [];
 
-        for (const letterAnimation of letterAnimations) {
+        for (const letterAnimation of compiledAnimatons.letter) {
           letterInlineStyle.push(
             `--offset-${letterAnimation.type}: ${
               animationOffset[letterAnimation.type]
@@ -216,26 +357,13 @@ export class FunText {
     const style = document.createElement("style");
     style.innerHTML = `
 
-      @keyframes ${FunText.WORD_KEYFRAME} {
-        from {
-          ${wordFrom.join(";")};
-        }
-        to {
-          ${wordTo.join(";")};
-        }
-      }
-
-      @keyframes ${FunText.LETTER_KEYFRAME} {
-        from {
-          ${letterFrom.join(";")};
-        }
-        to {
-          ${letterTo.join(";")};
-        }
-      }
+      ${FunText.buildKeyframes(wordKeyframeNames, wordKeyframeSteps).join("\n")}
+      ${FunText.buildKeyframes(letterKeyframeNames, letterKeyframeSteps).join(
+        "\n",
+      )}
 
       .${FunText.WORD_CLASS} {
-        animation-name: ${FunText.WORD_KEYFRAME};
+        animation-name: ${wordKeyframeNames.join(",")};
         animation-duration: ${wordDuration.join(",")};
         animation-delay: ${wordDelay.join(",")};
         animation-iteration-count: ${wordIteration.join(",")};
@@ -245,7 +373,7 @@ export class FunText {
       }
       
       .${FunText.LETTER_CLASS} {
-        animation-name: ${FunText.LETTER_KEYFRAME};
+        animation-name: ${letterKeyframeNames.join(",")};
         animation-duration: ${letterDuration.join(",")};
         animation-delay: ${letterDelay.join(",")};
         animation-iteration-count: ${letterIteration.join(",")};
@@ -282,8 +410,10 @@ export class FunText {
 
     this.options = options || {};
 
+    const compiledAnimatons = FunText.compileAnimations(animations);
+
     this.html = FunText.createHtml(this.options?.text || container.innerText);
-    this.style = FunText.createStyle(this.html, animations);
+    this.style = FunText.createStyle(this.html, compiledAnimatons);
   }
 
   mount() {

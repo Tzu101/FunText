@@ -1,4 +1,9 @@
+export interface Options {
+  text?: string;
+}
+
 type AnimationScope = "word" | "letter";
+
 export type AnimationType =
   | "horizontal"
   | "vertical"
@@ -6,16 +11,24 @@ export type AnimationType =
   | "background"
   | "opacity"
   | "scale"
-  | "rotation";
+  | "rotate";
+
+export type AnimationSteps = string | string[] | CompiledAnimationSteps;
+
+export interface AnimationSync {
+  duration: number;
+  location: number | "start" | "middle" | "end";
+}
 
 export interface Animation {
   scope: AnimationScope;
   type: AnimationType;
 
-  steps: [string, string];
+  steps: AnimationSteps;
+  sync?: AnimationSync;
   offset?: number;
 
-  duration?: number;
+  duration: number;
   delay?: number;
   iteration?: number | string | "infinite";
   direction?: "normal" | "reverse" | "alternate" | "alternate-reverse";
@@ -31,11 +44,14 @@ export interface Animation {
   fill?: "none" | "forwards" | "backwards" | "both" | "initial" | "inherit";
 }
 
+export interface CompiledAnimationSteps {
+  [key: number]: string;
+}
+
 export interface CompiledAnimation {
-  scope: AnimationScope;
   type: AnimationType;
 
-  steps: [string, string];
+  steps: CompiledAnimationSteps;
   offset: number;
 
   duration: number;
@@ -46,6 +62,7 @@ export interface CompiledAnimation {
   fill: string;
 }
 
-export interface Options {
-  text?: string;
+export interface CompiledAnimations {
+  word: CompiledAnimation[];
+  letter: CompiledAnimation[];
 }

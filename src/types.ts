@@ -1,32 +1,37 @@
-export interface Options {
+/*
+  OPTIONS
+*/
+
+// Input options
+export interface InputOptions {
   text?: string;
 }
 
-type AnimationScope = "word" | "letter";
+// Options
+export interface Options {
+  text: string;
+}
 
-export type AnimationType =
-  | "horizontal"
-  | "vertical"
-  | "color"
-  | "background"
-  | "opacity"
-  | "scale"
-  | "rotate";
+/*
+  ANIMATION
+*/
 
-export type AnimationSteps = string | string[] | CompiledAnimationSteps;
+// Input animation
+export type InputAnimationScope = "word" | "letter";
 
-export interface AnimationSync {
+export type InputAnimationType = "color";
+
+export type InputAnimationSteps = string | string[] | { [key: number]: string };
+
+export interface InputAnimationSync {
   duration: number;
   location: number | "start" | "middle" | "end";
 }
 
-export interface Animation {
-  scope: AnimationScope;
-  type: AnimationType;
-
-  steps: AnimationSteps;
-  sync?: AnimationSync;
-  offset?: number;
+export interface InputAnimation {
+  scope: InputAnimationScope;
+  type: InputAnimationType;
+  steps: InputAnimationSteps;
 
   duration: number;
   delay?: number;
@@ -42,17 +47,22 @@ export interface Animation {
     | "step-end";
   // TODO `custom:${string}`
   fill?: "none" | "forwards" | "backwards" | "both" | "initial" | "inherit";
+
+  offset?: number;
+  sync?: InputAnimationSync;
 }
 
-export interface CompiledAnimationSteps {
-  [key: number]: string;
+// Animation
+// TODO replace ver and hor with translate
+export type AnimationType = "color";
+
+export interface AnimationSteps {
+  [key: number]: string | null;
 }
 
-export interface CompiledAnimation {
+export interface Animation {
   type: AnimationType;
-
-  steps: CompiledAnimationSteps;
-  offset: number;
+  steps: AnimationSteps;
 
   duration: number;
   delay: number;
@@ -60,9 +70,24 @@ export interface CompiledAnimation {
   direction: string;
   timing: string;
   fill: string;
+
+  offset: number;
 }
 
-export interface CompiledAnimations {
-  word: CompiledAnimation[];
-  letter: CompiledAnimation[];
+export interface ScopedAnimations {
+  word: Animation[];
+  letter: Animation[];
+}
+
+// Keyframe animations
+export interface KeyframeAnimation {
+  name: string;
+  keyframes: string;
+
+  duration: string;
+  delay: string;
+  iteration: string;
+  direction: string;
+  timing: string;
+  fill: string;
 }

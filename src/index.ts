@@ -1,8 +1,11 @@
 import type {
   Options,
   InputOptions,
-  InputAnimationType,
-  InputAnimationSteps,
+  StringAnimationSteps,
+  NumberAnimationSteps,
+  DefaultAnimation,
+  TransformAnimation,
+  FilterAnimation,
   InputAnimationSync,
   InputAnimation,
   AnimationType,
@@ -39,11 +42,7 @@ class FunTextCompiler {
   */
 
   //CONSTANTS
-  private static readonly DEFAULT_ANIMATION: Animation = {
-    type: "color",
-    steps: {},
-    duration: 1,
-
+  private static readonly DEFAULT_ANIMATION = {
     delay: 0,
     iteration: "1",
     direction: "normal",
@@ -54,11 +53,7 @@ class FunTextCompiler {
   };
 
   // UTILITY
-  private static compileType(type: InputAnimationType): AnimationType {
-    return type;
-  }
-
-  private static compileSteps(steps: InputAnimationSteps): AnimationSteps {
+  private static compileSteps(steps: StringAnimationSteps): AnimationSteps {
     const compiledSteps: AnimationSteps = {};
 
     // Parameter steps is of type string
@@ -167,8 +162,7 @@ class FunTextCompiler {
     return sync.duration;
   }
 
-  private static compileAnimation(inputAnimation: InputAnimation): Animation {
-    const type = FunTextCompiler.compileType(inputAnimation.type);
+  private static compileAnimation(inputAnimation: DefaultAnimation): Animation {
     let steps = FunTextCompiler.compileSteps(inputAnimation.steps);
     steps = FunTextCompiler.syncSteps(
       steps,
@@ -181,7 +175,9 @@ class FunTextCompiler {
     );
 
     return {
-      type,
+      scope: inputAnimation.scope,
+      type: inputAnimation.type ?? "default",
+      property: inputAnimation.property,
       steps,
       duration,
 
@@ -198,16 +194,51 @@ class FunTextCompiler {
     };
   }
 
+  private static compileAnimationsToDefault(
+    animations: TransformAnimation[] | FilterAnimation[],
+  ): DefaultAnimation {
+    return {
+      scope: "letter",
+      type: "default",
+      property: "color",
+      steps: "",
+
+      duration: 1,
+    };
+  }
+
   // MAIN
   static compileAnimations(
     inputAnimations: InputAnimation[],
   ): ScopedAnimations {
+    const defaultAnimations: DefaultAnimation[] = [];
+    const transformAnimations: TransformAnimation[] = [];
+    const filterAnimations: FilterAnimation[] = [];
+
+    for (const animation of inputAnimations) {
+      if (!animation.type || animation.type === "default") {
+        defaultAnimations.push(animation);
+      } else if (animation.type === "transform") {
+        transformAnimations.push(animation);
+      } else if (animation.type === "filter") {
+        filterAnimations.push(animation);
+      }
+    }
+
+    if (transformAnimations.length > 0) {
+      // defaultAnimations.push(FunTextCompiler.compileAnimationsToDefault(transformAnimations))
+    }
+
+    if (filterAnimations.length > 0) {
+      // defaultAnimations.push(FunTextCompiler.compileAnimationsToDefault(filterAnimations))
+    }
+
     const animations: ScopedAnimations = {
       word: [],
       letter: [],
     };
 
-    for (const animation of inputAnimations) {
+    for (const animation of defaultAnimations) {
       const compiledAnimation = FunTextCompiler.compileAnimation(animation);
 
       if (animation.scope === "word") {
@@ -230,24 +261,21 @@ class FunTextBuilder {
   private static readonly WORD_SPLIT = " ";
   private static readonly LETTER_SPLIT = "";
 
-  private static readonly WORD_SCOPE = "word";
-  private static readonly LETTER_SCOPE = "letter";
-
   private static readonly HTML_ELEMENT = "div";
   private static readonly WORD_ELEMENT = "div";
   private static readonly LETTER_ELEMENT = "p";
   private static readonly DIVIDER_ELEMENT = "p";
 
   // TODO: Root class, element class (funtext funtext__element funtext__element--word)
-  private static readonly BASE_CLASS = "funtext";
-  private static readonly WORD_CLASS = "funtext__word";
-  private static readonly LETTER_CLASS = "funtext__letter";
-  private static readonly DIVIDER_CLASS = "funtext__divider";
+  private static readonly ELEMENT_CLASS = "funtext__element";
+  private static readonly WORD_CLASS = `${this.ELEMENT_CLASS}--word`;
+  private static readonly LETTER_CLASS = `${this.ELEMENT_CLASS}--letter`;
+  private static readonly DIVIDER_CLASS = `${this.ELEMENT_CLASS}--divider`;
 
   // UTILITY
   private static buildDivider(): HTMLElement {
     const divider = document.createElement(FunTextBuilder.DIVIDER_ELEMENT);
-    divider.classList.add(FunTextBuilder.BASE_CLASS);
+    divider.classList.add(FunTextBuilder.ELEMENT_CLASS);
     divider.classList.add(FunTextBuilder.DIVIDER_CLASS);
 
     return divider;
@@ -274,12 +302,12 @@ class FunTextBuilder {
 
       // Word element init
       const wordElement = document.createElement(FunTextBuilder.WORD_ELEMENT);
-      wordElement.classList.add(FunTextBuilder.BASE_CLASS);
+      wordElement.classList.add(FunTextBuilder.ELEMENT_CLASS);
       wordElement.classList.add(FunTextBuilder.WORD_CLASS);
 
       // Word animation offset
       for (const wordAnimation of animations.word) {
-        const animationName = `--offset-${FunTextBuilder.WORD_SCOPE}-${wordAnimation.type}`;
+        const animationName = `--offset-${wordAnimation.scope}-${wordAnimation.property}`;
         const animationOffset = `${wordIndex * wordAnimation.offset}s`;
         wordElement.style.setProperty(animationName, animationOffset);
       }
@@ -290,13 +318,13 @@ class FunTextBuilder {
         const letterElement = document.createElement(
           FunTextBuilder.LETTER_ELEMENT,
         );
-        letterElement.classList.add(FunTextBuilder.BASE_CLASS);
+        letterElement.classList.add(FunTextBuilder.ELEMENT_CLASS);
         letterElement.classList.add(FunTextBuilder.LETTER_CLASS);
         letterElement.innerText = letters[letterIndex];
 
         // Letter animation offset
         for (const letterAnimation of animations.letter) {
-          const animationName = `--offset-${FunTextBuilder.LETTER_SCOPE}-${letterAnimation.type}`;
+          const animationName = `--offset-${letterAnimation.scope}-${letterAnimation.property}`;
           const animationOffset = `${letterCount * letterAnimation.offset}s`;
           letterElement.style.setProperty(animationName, animationOffset);
         }
@@ -324,10 +352,12 @@ class FunTextBuilder {
   // CONSTANTS
   private static readonly KEYFRAME = "funtext-keyframe";
 
-  private static readonly DEFAULT_ANIMATION_PROPERTY: {
+  private static readonly DEFAULT_PROPERTY_VALUE: {
     [key in AnimationType]: string;
   } = {
-    color: "inherit",
+    default: "inherit",
+    transform: "0",
+    filter: "0",
   };
 
   private static readonly DEFAULT_CSS = `
@@ -343,8 +373,8 @@ class FunTextBuilder {
     for (const stepPercent of Object.keys(animation.steps)) {
       const stepValue = animation.steps[Number(stepPercent)];
 
-      keyframes += `${stepPercent}% { ${animation.type}: ${
-        stepValue ?? FunTextBuilder.DEFAULT_ANIMATION_PROPERTY[animation.type]
+      keyframes += `${stepPercent}% { ${animation.property}: ${
+        stepValue ?? FunTextBuilder.DEFAULT_PROPERTY_VALUE[animation.type]
       } }`;
     }
 
@@ -355,15 +385,12 @@ class FunTextBuilder {
     `;
   }
 
-  private static buildAnimation(
-    animation: Animation,
-    scope: string,
-  ): KeyframeAnimation {
-    const name = `${FunTextBuilder.KEYFRAME}-${scope}-${animation.type}`;
+  private static buildAnimation(animation: Animation): KeyframeAnimation {
+    const name = `${FunTextBuilder.KEYFRAME}-${animation.scope}-${animation.type}`;
     const keyframes = FunTextBuilder.buildKeyframes(name, animation);
 
     const duration = `${animation.duration}s`;
-    const delay = `calc(${animation.delay}s + var(--offset-${scope}-${animation.type}))`;
+    const delay = `calc(${animation.delay}s + var(--offset-${animation.scope}-${animation.property}))`;
 
     return {
       name,
@@ -397,18 +424,11 @@ class FunTextBuilder {
     const letterAnimations: KeyframeAnimation[] = [];
 
     for (const wordAnimation of animations.word) {
-      wordAnimations.push(
-        FunTextBuilder.buildAnimation(wordAnimation, FunTextBuilder.WORD_SCOPE),
-      );
+      wordAnimations.push(FunTextBuilder.buildAnimation(wordAnimation));
     }
 
     for (const letterAnimation of animations.letter) {
-      letterAnimations.push(
-        FunTextBuilder.buildAnimation(
-          letterAnimation,
-          FunTextBuilder.LETTER_SCOPE,
-        ),
-      );
+      letterAnimations.push(FunTextBuilder.buildAnimation(letterAnimation));
     }
 
     const style = document.createElement("style");
@@ -496,7 +516,7 @@ class FunTextBuilder {
         
       }
 
-      .${FunTextBuilder.BASE_CLASS} {
+      .${FunTextBuilder.ELEMENT_CLASS} {
         ${FunTextBuilder.DEFAULT_CSS}
       }
       `;
@@ -505,182 +525,6 @@ class FunTextBuilder {
 }
 
 export class FunText {
-  /*
-    HTML
-  */
-
-  /*
-    STYLE
-  */
-
-  // CONSTANTS
-  private static readonly KEYFRAME = "funtext-keyframe";
-  private static readonly CLASS = "funtext";
-  private static readonly WORD_CLASS = "funtext__word";
-  private static readonly LETTER_CLASS = "funtext__letter";
-  private static readonly DIVIDER_CLASS = "funtext__divider";
-
-  private static readonly DEFAULT_ANIMATION = {
-    offset: 0.5,
-    delay: 0,
-    iteration: "1",
-    direction: "normal",
-    timing: "linear",
-    fill: "none",
-  };
-
-  private static readonly ANIMATED_PROPERTY: {
-    [key in InputAnimationType]: string;
-  } = {
-    color: "color",
-  };
-
-  private static readonly ANIMATED_PROPERTY_DEFAULT: {
-    [key in InputAnimationType]: string;
-  } = {
-    color: "inherit",
-  };
-
-  // UTILITY
-  private static buildKeyframeStep(
-    type: InputAnimationType,
-    percent: number,
-    value: string | null,
-  ): string {
-    return `${percent}% { ${FunText.ANIMATED_PROPERTY[type]}: ${
-      value ?? FunText.ANIMATED_PROPERTY_DEFAULT[type]
-    } }`;
-  }
-
-  private static buildKeyframes(
-    names: string[],
-    keyframeSteps: string[],
-  ): string[] {
-    const keyframes: string[] = [];
-
-    for (let n = 0; n < names.length; n++) {
-      keyframes.push(`@keyframes ${names[n]} { ${keyframeSteps.join("\n")} }`);
-    }
-
-    return keyframes;
-  }
-
-  // CSS
-  private static createStyle(animations: ScopedAnimations): HTMLStyleElement {
-    const wordKeyframeNames: string[] = [];
-    const wordKeyframeSteps: string[] = [];
-    const wordDuration: string[] = [];
-    const wordDelay: string[] = [];
-    const wordIteration: string[] = [];
-    const wordDirection: string[] = [];
-    const wordTiming: string[] = [];
-    const wordFill: string[] = [];
-
-    for (const wordAnimation of animations.word) {
-      wordKeyframeNames.push(`${FunText.KEYFRAME}-${wordAnimation.type}`);
-
-      let wordKeyframe = "";
-      for (const stepPercent of Object.keys(wordAnimation.steps)) {
-        const stepPercentNum = Number(stepPercent);
-        const stepValue = wordAnimation.steps[stepPercentNum];
-        wordKeyframe += FunText.buildKeyframeStep(
-          wordAnimation.type,
-          stepPercentNum,
-          stepValue,
-        );
-      }
-      wordKeyframeSteps.push(wordKeyframe);
-
-      wordDuration.push(`${wordAnimation.duration}s`);
-      wordDelay.push(
-        `calc(${wordAnimation.delay}s + var(--offset-${wordAnimation.type}))`,
-      );
-      wordIteration.push(wordAnimation.iteration);
-      wordDirection.push(wordAnimation.direction);
-      wordTiming.push(wordAnimation.timing);
-      wordFill.push(wordAnimation.fill);
-    }
-
-    const letterKeyframeNames: string[] = [];
-    const letterKeyframeSteps: string[] = [];
-    const letterDuration: string[] = [];
-    const letterDelay: string[] = [];
-    const letterIteration: string[] = [];
-    const letterDirection: string[] = [];
-    const letterTiming: string[] = [];
-    const letterFill: string[] = [];
-
-    for (const letterAnimation of animations.letter) {
-      letterKeyframeNames.push(`${FunText.KEYFRAME}-${letterAnimation.type}`);
-
-      let letterKeyframe = "";
-      for (const stepPercent of Object.keys(letterAnimation.steps)) {
-        const stepPercentNum = Number(stepPercent);
-        const stepValue = letterAnimation.steps[stepPercentNum];
-        letterKeyframe += FunText.buildKeyframeStep(
-          letterAnimation.type,
-          stepPercentNum,
-          stepValue,
-        );
-      }
-      letterKeyframeSteps.push(letterKeyframe);
-
-      letterDuration.push(`${letterAnimation.duration}s`);
-      letterDelay.push(
-        `calc(${letterAnimation.delay}s + var(--offset-${letterAnimation.type}))`,
-      );
-      letterIteration.push(letterAnimation.iteration);
-      letterDirection.push(letterAnimation.direction);
-      letterTiming.push(letterAnimation.timing);
-      letterFill.push(letterAnimation.fill);
-    }
-
-    const style = document.createElement("style");
-    style.innerHTML = `
-
-      ${FunText.buildKeyframes(wordKeyframeNames, wordKeyframeSteps).join("\n")}
-      ${FunText.buildKeyframes(letterKeyframeNames, letterKeyframeSteps).join(
-        "\n",
-      )}
-
-      .${FunText.WORD_CLASS} {
-        animation-name: ${wordKeyframeNames.join(",")};
-        animation-duration: ${wordDuration.join(",")};
-        animation-delay: ${wordDelay.join(",")};
-        animation-iteration-count: ${wordIteration.join(",")};
-        animation-direction: ${wordDirection.join(",")};
-        animation-timing-function: ${wordTiming.join(",")};
-        animation-fill-mode: ${wordFill.join(",")};
-      }
-      
-      .${FunText.LETTER_CLASS} {
-        animation-name: ${letterKeyframeNames.join(",")};
-        animation-duration: ${letterDuration.join(",")};
-        animation-delay: ${letterDelay.join(",")};
-        animation-iteration-count: ${letterIteration.join(",")};
-        animation-direction: ${letterDirection.join(",")};
-        animation-timing-function: ${letterTiming.join(",")};
-        animation-fill-mode: ${letterFill.join(",")};
-      }
-
-      .${FunText.DIVIDER_CLASS} {
-        
-      }
-
-      .${FunText.CLASS} {
-        display: inline;
-        margin: 0;
-        padding: 0;
-      }
-      `;
-
-    return style;
-  }
-
-  /*
-    LOGIC
-  */
-
   private options: Options;
   private animations: ScopedAnimations;
   private html: HTMLElement;

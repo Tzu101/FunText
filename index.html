@@ -39,14 +39,22 @@
       const funtext1 = new FunText(container1, [
         {
           scope: "letter",
-          type: "color",
-          steps: ["red", "green", "yellow"],
+          property: "color",
+          steps: ["red", "blue"],
           iteration: "infinite",
           duration: duration,
-          /*sync: {
+          sync: {
             duration: syncDuration,
             location: 20,
-          },*/
+          },
+        },
+        {
+          scope: "word",
+          property: "opacity",
+          steps: "0.5",
+          duration: 1,
+          offset: 0.3,
+          iteration: "infinite",
         },
       ]);
       funtext1.mount();
@@ -55,8 +63,8 @@
       const funtext2 = new FunText(container2, [
         {
           scope: "letter",
-          type: "color",
-          steps: ["red", "green", "yellow"],
+          property: "color",
+          steps: ["green", "yellow"],
           iteration: "infinite",
           duration: duration,
           sync: {
@@ -71,8 +79,8 @@
       const funtext3 = new FunText(container3, [
         {
           scope: "letter",
-          type: "color",
-          steps: ["red", "green", "yellow"],
+          property: "color",
+          steps: ["#111", "#eee"],
           iteration: "infinite",
           duration: duration,
           sync: {
@@ -83,5 +91,12 @@
       ]);
       funtext3.mount();
     </script>
+
+    <style>
+      #counter {
+        filter: blur(0.5px);
+        translate: scaleX();
+      }
+    </style>
   </body>
 </html>

@@ -17,21 +17,15 @@ export interface Options {
 */
 
 // Input animation
-export type InputAnimationScope = "word" | "letter";
-
-export type InputAnimationType = "color";
-
-export type InputAnimationSteps = string | string[] | { [key: number]: string };
+type InputAnimationScope = "word" | "letter";
 
 export interface InputAnimationSync {
   duration: number;
   location: number | "start" | "middle" | "end";
 }
 
-export interface InputAnimation {
+interface InputAnimationBase {
   scope: InputAnimationScope;
-  type: InputAnimationType;
-  steps: InputAnimationSteps;
 
   duration: number;
   delay?: number;
@@ -48,20 +42,73 @@ export interface InputAnimation {
   // TODO `custom:${string}`
   fill?: "none" | "forwards" | "backwards" | "both" | "initial" | "inherit";
 
+  // TODO: Offset calculate function
   offset?: number;
   sync?: InputAnimationSync;
 }
 
+export type StringAnimationSteps =
+  | string
+  | string[]
+  | { [key: number]: string };
+
+export type NumberAnimationSteps =
+  | number
+  | number[]
+  | { [key: number]: number };
+
+export type DefaultAnimation = {
+  type?: "default";
+  property: string;
+  steps: StringAnimationSteps;
+} & InputAnimationBase;
+
+export type TransformAnimation = {
+  type: "transform";
+  property:
+    | "rotate"
+    | "translateX"
+    | "translateY"
+    | "scaleX"
+    | "scaleY"
+    | "scewX"
+    | "scewY";
+  steps: NumberAnimationSteps;
+  unit: string;
+} & InputAnimationBase;
+
+export type FilterAnimation = {
+  type: "filter";
+  property:
+    | "blue"
+    | "brightness"
+    | "contrast"
+    | "grayscale"
+    | "hue-rotate"
+    | "invert"
+    | "opacity"
+    | "saturate"
+    | "sepia";
+  steps: NumberAnimationSteps;
+  unit: string;
+} & InputAnimationBase;
+
+export type InputAnimation =
+  | DefaultAnimation
+  | TransformAnimation
+  | FilterAnimation;
+
 // Animation
-// TODO replace ver and hor with translate
-export type AnimationType = "color";
+export type AnimationType = "default" | "transform" | "filter";
 
 export interface AnimationSteps {
   [key: number]: string | null;
 }
 
 export interface Animation {
+  scope: string;
   type: AnimationType;
+  property: string;
   steps: AnimationSteps;
 
   duration: number;

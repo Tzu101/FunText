@@ -1,11 +1,10 @@
 import type {
   Options,
   InputOptions,
-  StringAnimationSteps,
-  NumberAnimationSteps,
+  InputAnimationSteps,
   DefaultAnimation,
-  TransformAnimation,
-  FilterAnimation,
+  TransformAnimations,
+  FilterAnimations,
   InputAnimationSync,
   InputAnimation,
   AnimationType,
@@ -53,11 +52,11 @@ class FunTextCompiler {
   };
 
   // UTILITY
-  private static compileSteps(steps: StringAnimationSteps): AnimationSteps {
+  private static compileSteps(steps: InputAnimationSteps): AnimationSteps {
     const compiledSteps: AnimationSteps = {};
 
     // Parameter steps is of type string
-    if (typeof steps === "string") {
+    if (typeof steps === "string" || typeof steps === "number") {
       compiledSteps[100] = steps;
       return compiledSteps;
     }
@@ -89,6 +88,7 @@ class FunTextCompiler {
     steps: AnimationSteps,
     duration: number,
     sync?: InputAnimationSync,
+    fill?: string,
   ): AnimationSteps {
     // Steps not defined
     if (!sync) {
@@ -133,15 +133,34 @@ class FunTextCompiler {
     }
 
     // Indicate keyframes before and after sync need default value
-    syncedSteps[minStep - 0.01] = null;
-    syncedSteps[maxStep + 0.01] = null;
+    if (minStep !== maxStep) {
+      if (fill === "backwards" || fill === "both") {
+        syncedSteps[minStep - 0.01] = syncedSteps[minStep];
+      } else {
+        syncedSteps[minStep - 0.01] = null;
+      }
+    }
+
+    if (fill === "forwards" || fill === "both") {
+      syncedSteps[maxStep + 0.01] = syncedSteps[maxStep];
+    } else {
+      syncedSteps[maxStep + 0.01] = null;
+    }
 
     // Indicate keyframes at the start and end need default value if they dont exist
     if (!syncedSteps[0]) {
-      syncedSteps[0] = null;
+      if (fill === "backwards" || fill === "both") {
+        syncedSteps[0] = syncedSteps[minStep];
+      } else {
+        syncedSteps[0] = null;
+      }
     }
     if (!syncedSteps[100]) {
-      syncedSteps[100] = null;
+      if (fill === "forwards" || fill === "both") {
+        syncedSteps[100] = syncedSteps[maxStep];
+      } else {
+        syncedSteps[100] = null;
+      }
     }
 
     return syncedSteps;
@@ -162,49 +181,168 @@ class FunTextCompiler {
     return sync.duration;
   }
 
-  private static compileAnimation(inputAnimation: DefaultAnimation): Animation {
-    let steps = FunTextCompiler.compileSteps(inputAnimation.steps);
+  private static compileAnimation(animation: DefaultAnimation): Animation {
+    let steps = FunTextCompiler.compileSteps(animation.steps);
     steps = FunTextCompiler.syncSteps(
       steps,
-      inputAnimation.duration,
-      inputAnimation.sync,
+      animation.duration,
+      animation.sync,
+      animation.fill,
     );
     const duration = FunTextCompiler.compileDuration(
-      inputAnimation.duration,
-      inputAnimation.sync,
+      animation.duration,
+      animation.sync,
     );
 
     return {
-      scope: inputAnimation.scope,
-      type: inputAnimation.type ?? "default",
-      property: inputAnimation.property,
+      scope: animation.scope,
+      type: animation.type ?? "default",
+      property: animation.property,
       steps,
       duration,
 
-      delay: inputAnimation.delay ?? FunTextCompiler.DEFAULT_ANIMATION.delay,
+      delay: animation.delay ?? FunTextCompiler.DEFAULT_ANIMATION.delay,
       iteration:
-        `${inputAnimation.iteration}` ??
-        FunTextCompiler.DEFAULT_ANIMATION.iteration,
+        `${animation.iteration}` ?? FunTextCompiler.DEFAULT_ANIMATION.iteration,
       direction:
-        inputAnimation.direction ?? FunTextCompiler.DEFAULT_ANIMATION.direction,
-      timing: inputAnimation.timing ?? FunTextCompiler.DEFAULT_ANIMATION.timing,
-      fill: inputAnimation.fill ?? FunTextCompiler.DEFAULT_ANIMATION.fill,
+        animation.direction ?? FunTextCompiler.DEFAULT_ANIMATION.direction,
+      timing: animation.timing ?? FunTextCompiler.DEFAULT_ANIMATION.timing,
+      fill: animation.fill ?? FunTextCompiler.DEFAULT_ANIMATION.fill,
 
-      offset: inputAnimation.offset ?? FunTextCompiler.DEFAULT_ANIMATION.offset,
+      offset: animation.offset ?? FunTextCompiler.DEFAULT_ANIMATION.offset,
     };
   }
 
-  private static compileAnimationsToDefault(
-    animations: TransformAnimation[] | FilterAnimation[],
-  ): DefaultAnimation {
-    return {
-      scope: "letter",
-      type: "default",
-      property: "color",
-      steps: "",
+  private static mergeAnimations(
+    animations: TransformAnimations | FilterAnimations,
+  ): Animation {
+    let maxLateness = 0;
+    const compiledSteps: AnimationSteps[] = [];
 
-      duration: 1,
+    for (const animation of animations.animations) {
+      const lateness = animation.duration + (animation.delay ?? 0);
+
+      if (maxLateness < lateness) {
+        maxLateness = lateness;
+      }
+
+      compiledSteps.push(FunTextCompiler.compileSteps(animation.steps));
+    }
+
+    const allFramesSet = new Set<number>();
+    for (let s = 0; s < compiledSteps.length; s++) {
+      const animation = animations.animations[s];
+
+      const delayFrame = ((animation.delay ?? 0) / maxLateness) * 100;
+      const durationRatio = animation.duration / maxLateness;
+
+      const syncedSteps: AnimationSteps = {};
+      const frames = Object.keys(compiledSteps[s]).map((f) => Number(f));
+      for (const frame of frames) {
+        const syncedFrame = frame * durationRatio + delayFrame;
+        syncedSteps[syncedFrame] = compiledSteps[s][frame];
+        allFramesSet.add(syncedFrame);
+      }
+
+      compiledSteps[s] = syncedSteps;
+    }
+
+    const allFramesList = Array.from(allFramesSet);
+    for (let s = 0; s < compiledSteps.length; s++) {
+      const compiledStep = compiledSteps[s];
+      const stepFrames = Object.keys(compiledStep).map((f) => Number(f));
+
+      for (const frame of Array.from(allFramesList)) {
+        if (compiledStep[frame]) {
+          continue;
+        }
+
+        let lowerDiff = Number.MAX_SAFE_INTEGER;
+        let higherDiff = Number.MAX_SAFE_INTEGER;
+        let closestLower: number | null = null;
+        let closestHigher: number | null = null;
+
+        for (const stepFrame of stepFrames) {
+          if (stepFrame < frame) {
+            const diff = frame - stepFrame;
+
+            if (lowerDiff > diff) {
+              lowerDiff = diff;
+              closestLower = stepFrame;
+            }
+          } else {
+            const diff = stepFrame - frame;
+
+            if (higherDiff > diff) {
+              higherDiff = diff;
+              closestHigher = stepFrame;
+            }
+          }
+        }
+
+        let lowerValue = 0;
+        if (closestLower) {
+          lowerValue = Number(compiledStep[closestLower] ?? 0);
+        } else {
+          closestLower = 0;
+        }
+
+        let higherValue = 0;
+        if (closestHigher) {
+          higherValue = Number(compiledStep[closestHigher] ?? 0);
+        } else {
+          closestHigher = 100;
+        }
+
+        const valueRatio = (frame - closestLower) / closestHigher;
+        const frameValue =
+          lowerValue * (1 - valueRatio) + higherValue * valueRatio;
+        compiledStep[frame] = frameValue;
+      }
+    }
+
+    const mergedSteps: AnimationSteps = {};
+    for (const frame of allFramesList) {
+      const values: string[] = [];
+
+      for (let s = 0; s < compiledSteps.length; s++) {
+        values.push(
+          `${animations.animations[s].property}(${compiledSteps[s][frame]}${
+            animations.animations[s].unit ?? ""
+          })`,
+        );
+      }
+      mergedSteps[frame] = values.join(" ");
+    }
+
+    return {
+      scope: animations.scope,
+      type: animations.type,
+      property: animations.type,
+      steps: mergedSteps,
+      duration: maxLateness,
+      delay: animations.delay ?? FunTextCompiler.DEFAULT_ANIMATION.delay,
+      iteration:
+        `${animations.iteration}` ??
+        FunTextCompiler.DEFAULT_ANIMATION.iteration,
+      direction:
+        animations.direction ?? FunTextCompiler.DEFAULT_ANIMATION.direction,
+      timing: animations.timing ?? FunTextCompiler.DEFAULT_ANIMATION.timing,
+      fill: animations.fill ?? FunTextCompiler.DEFAULT_ANIMATION.fill,
+
+      offset: animations.offset ?? FunTextCompiler.DEFAULT_ANIMATION.offset,
     };
+  }
+
+  private static addScopeAnimation(
+    scopedAnimations: ScopedAnimations,
+    animation: Animation,
+    scope: string,
+  ) {
+    if (!scopedAnimations[scope]) {
+      scopedAnimations[scope] = [];
+    }
+    scopedAnimations[scope].push(animation);
   }
 
   // MAIN
@@ -212,43 +350,52 @@ class FunTextCompiler {
     inputAnimations: InputAnimation[],
   ): ScopedAnimations {
     const defaultAnimations: DefaultAnimation[] = [];
-    const transformAnimations: TransformAnimation[] = [];
-    const filterAnimations: FilterAnimation[] = [];
+    let transformAnimations: TransformAnimations | null = null;
+    let filterAnimations: FilterAnimations | null = null;
 
     for (const animation of inputAnimations) {
       if (!animation.type || animation.type === "default") {
         defaultAnimations.push(animation);
       } else if (animation.type === "transform") {
-        transformAnimations.push(animation);
+        transformAnimations = animation;
       } else if (animation.type === "filter") {
-        filterAnimations.push(animation);
+        filterAnimations = animation;
       }
     }
 
-    if (transformAnimations.length > 0) {
-      // defaultAnimations.push(FunTextCompiler.compileAnimationsToDefault(transformAnimations))
-    }
-
-    if (filterAnimations.length > 0) {
-      // defaultAnimations.push(FunTextCompiler.compileAnimationsToDefault(filterAnimations))
-    }
-
-    const animations: ScopedAnimations = {
-      word: [],
-      letter: [],
-    };
-
+    const scopedAnimations: ScopedAnimations = {};
+    scopedAnimations.letter = [];
+    scopedAnimations.word = [];
     for (const animation of defaultAnimations) {
       const compiledAnimation = FunTextCompiler.compileAnimation(animation);
-
-      if (animation.scope === "word") {
-        animations.word.push(compiledAnimation);
-      } else {
-        animations.letter.push(compiledAnimation);
-      }
+      FunTextCompiler.addScopeAnimation(
+        scopedAnimations,
+        compiledAnimation,
+        compiledAnimation.scope,
+      );
     }
 
-    return animations;
+    if (transformAnimations) {
+      const compiledAnimation =
+        FunTextCompiler.mergeAnimations(transformAnimations);
+      FunTextCompiler.addScopeAnimation(
+        scopedAnimations,
+        compiledAnimation,
+        compiledAnimation.scope,
+      );
+    }
+
+    if (filterAnimations) {
+      const compiledAnimation =
+        FunTextCompiler.mergeAnimations(filterAnimations);
+      FunTextCompiler.addScopeAnimation(
+        scopedAnimations,
+        compiledAnimation,
+        compiledAnimation.scope,
+      );
+    }
+
+    return scopedAnimations;
   }
 }
 
@@ -296,6 +443,7 @@ class FunTextBuilder {
       const letters = words[wordIndex].split(FunTextBuilder.LETTER_SPLIT);
       if (letters.length === 0) {
         const divider = FunTextBuilder.buildDivider();
+        divider.innerText = FunTextBuilder.WORD_SPLIT;
         html.appendChild(divider);
         continue;
       }
@@ -332,14 +480,15 @@ class FunTextBuilder {
         wordElement.appendChild(letterElement);
       }
 
+      html.appendChild(wordElement);
+
       // Add divider than was lost during the split operation
       if (wordIndex < words.length - 1) {
         const divider = FunTextBuilder.buildDivider();
-        divider.innerText = FunTextBuilder.WORD_SPLIT;
-        wordElement.appendChild(divider);
+        // divider.innerText = FunTextBuilder.WORD_SPLIT;
+        divider.innerHTML = "&nbsp;";
+        html.appendChild(divider);
       }
-
-      html.appendChild(wordElement);
     }
 
     return html;
@@ -361,7 +510,7 @@ class FunTextBuilder {
   };
 
   private static readonly DEFAULT_CSS = `
-    display: inline;
+    display: inline-block;
     margin: 0;
     padding: 0;
   `;
@@ -513,7 +662,7 @@ class FunTextBuilder {
       }
 
       .${FunTextBuilder.DIVIDER_CLASS} {
-        
+
       }
 
       .${FunTextBuilder.ELEMENT_CLASS} {

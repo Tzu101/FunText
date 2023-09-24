@@ -24,10 +24,12 @@ export interface InputAnimationSync {
   location: number | "start" | "middle" | "end";
 }
 
-interface InputAnimationBase {
+type strnum = string | number;
+export type InputAnimationSteps = strnum | strnum[] | { [key: number]: strnum };
+
+interface AnimationProperties {
   scope: InputAnimationScope;
 
-  duration: number;
   delay?: number;
   iteration?: number | string | "infinite";
   direction?: "normal" | "reverse" | "alternate" | "alternate-reverse";
@@ -47,24 +49,14 @@ interface InputAnimationBase {
   sync?: InputAnimationSync;
 }
 
-export type StringAnimationSteps =
-  | string
-  | string[]
-  | { [key: number]: string };
-
-export type NumberAnimationSteps =
-  | number
-  | number[]
-  | { [key: number]: number };
-
 export type DefaultAnimation = {
   type?: "default";
   property: string;
-  steps: StringAnimationSteps;
-} & InputAnimationBase;
+  steps: InputAnimationSteps;
+  duration: number;
+} & AnimationProperties;
 
-export type TransformAnimation = {
-  type: "transform";
+export interface TransformAnimation {
   property:
     | "rotate"
     | "translateX"
@@ -73,14 +65,20 @@ export type TransformAnimation = {
     | "scaleY"
     | "scewX"
     | "scewY";
-  steps: NumberAnimationSteps;
+  steps: InputAnimationSteps;
   unit: string;
-} & InputAnimationBase;
 
-export type FilterAnimation = {
-  type: "filter";
+  duration: number;
+  delay?: number;
+}
+export type TransformAnimations = {
+  type: "transform";
+  animations: TransformAnimation[];
+} & AnimationProperties;
+
+export interface FilterAnimation {
   property:
-    | "blue"
+    | "blur"
     | "brightness"
     | "contrast"
     | "grayscale"
@@ -89,20 +87,27 @@ export type FilterAnimation = {
     | "opacity"
     | "saturate"
     | "sepia";
-  steps: NumberAnimationSteps;
+  steps: InputAnimationSteps;
   unit: string;
-} & InputAnimationBase;
+
+  duration: number;
+  delay?: number;
+}
+export type FilterAnimations = {
+  type: "filter";
+  animations: FilterAnimation[];
+} & AnimationProperties;
 
 export type InputAnimation =
   | DefaultAnimation
-  | TransformAnimation
-  | FilterAnimation;
+  | TransformAnimations
+  | FilterAnimations;
 
 // Animation
 export type AnimationType = "default" | "transform" | "filter";
 
 export interface AnimationSteps {
-  [key: number]: string | null;
+  [key: number]: strnum | null;
 }
 
 export interface Animation {
@@ -121,10 +126,7 @@ export interface Animation {
   offset: number;
 }
 
-export interface ScopedAnimations {
-  word: Animation[];
-  letter: Animation[];
-}
+export type ScopedAnimations = { [key: string]: Animation[] };
 
 // Keyframe animations
 export interface KeyframeAnimation {

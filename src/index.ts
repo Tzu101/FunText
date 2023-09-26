@@ -3,7 +3,9 @@ import type {
   InputOptions,
   InputAnimationSteps,
   DefaultAnimation,
+  TransformAnimation,
   TransformAnimations,
+  FilterAnimation,
   FilterAnimations,
   InputAnimationSync,
   InputAnimation,
@@ -216,10 +218,19 @@ class FunTextCompiler {
   private static mergeAnimations(
     animations: TransformAnimations | FilterAnimations,
   ): Animation {
+    const uniqueAnimations = new Set<string>();
+
     let maxLateness = 0;
     const compiledSteps: AnimationSteps[] = [];
+    const compiledAnimations: (TransformAnimation | FilterAnimation)[] = [];
 
     for (const animation of animations.animations) {
+      if (uniqueAnimations.has(animation.property)) {
+        continue;
+      } else {
+        uniqueAnimations.add(animation.property);
+      }
+
       const lateness = animation.duration + (animation.delay ?? 0);
 
       if (maxLateness < lateness) {
@@ -227,11 +238,12 @@ class FunTextCompiler {
       }
 
       compiledSteps.push(FunTextCompiler.compileSteps(animation.steps));
+      compiledAnimations.push(animation);
     }
 
     const allFramesSet = new Set<number>();
     for (let s = 0; s < compiledSteps.length; s++) {
-      const animation = animations.animations[s];
+      const animation = compiledAnimations[s];
 
       const delayFrame = ((animation.delay ?? 0) / maxLateness) * 100;
       const durationRatio = animation.duration / maxLateness;
@@ -307,8 +319,8 @@ class FunTextCompiler {
 
       for (let s = 0; s < compiledSteps.length; s++) {
         values.push(
-          `${animations.animations[s].property}(${compiledSteps[s][frame]}${
-            animations.animations[s].unit ?? ""
+          `${compiledAnimations[s].property}(${compiledSteps[s][frame]}${
+            compiledAnimations[s].unit ?? ""
           })`,
         );
       }
@@ -363,11 +375,20 @@ class FunTextCompiler {
       }
     }
 
+    const uniqueAnimations = new Set<string>();
+
     const scopedAnimations: ScopedAnimations = {};
     scopedAnimations.letter = [];
     scopedAnimations.word = [];
     for (const animation of defaultAnimations) {
+      if (uniqueAnimations.has(animation.property)) {
+        continue;
+      } else {
+        uniqueAnimations.add(animation.property);
+      }
+
       const compiledAnimation = FunTextCompiler.compileAnimation(animation);
+
       FunTextCompiler.addScopeAnimation(
         scopedAnimations,
         compiledAnimation,

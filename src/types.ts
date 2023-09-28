@@ -25,7 +25,7 @@ export interface InputAnimationSync {
 }
 
 type strnum = string | number;
-export type InputAnimationSteps = strnum | strnum[] | { [key: number]: strnum };
+export type InputAnimationSteps = strnum | strnum[] | AnimationSteps;
 
 interface AnimationProperties {
   scope: InputAnimationScope;
@@ -45,7 +45,7 @@ interface AnimationProperties {
   fill?: "none" | "forwards" | "backwards" | "both" | "initial" | "inherit";
 
   // TODO: Offset calculate function
-  offset?: number;
+  offset?: number | AnimationOffset;
   sync?: InputAnimationSync;
 }
 
@@ -104,15 +104,19 @@ export type InputAnimation =
   | FilterAnimations;
 
 // Animation
-export type AnimationType = "default" | "transform" | "filter";
-
 export interface AnimationSteps {
   [key: number]: strnum | null;
 }
 
+export type AnimationOffset = (
+  wordInd: number,
+  letterInd: number,
+  wordNum: number,
+  letterNum: number,
+) => number;
+
 export interface Animation {
   scope: string;
-  type: AnimationType;
   property: string;
   steps: AnimationSteps;
 
@@ -123,7 +127,7 @@ export interface Animation {
   timing: string;
   fill: string;
 
-  offset: number;
+  offset: AnimationOffset;
 }
 
 export type ScopedAnimations = { [key: string]: Animation[] };

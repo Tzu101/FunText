@@ -1,3 +1,4 @@
+import { off } from "process";
 import type {
   Options,
   InputOptions,
@@ -9,8 +10,8 @@ import type {
   FilterAnimations,
   InputAnimationSync,
   InputAnimation,
-  AnimationType,
   AnimationSteps,
+  AnimationOffset,
   Animation,
   ScopedAnimations,
   KeyframeAnimation,
@@ -183,6 +184,20 @@ class FunTextCompiler {
     return sync.duration;
   }
 
+  private static compileOffset(offset: number | AnimationOffset) {
+    if (typeof offset === "number") {
+      return (
+        wordInd: number,
+        letterInd: number,
+        wordNum: number,
+        letterNum: number,
+      ) => {
+        return letterInd * offset;
+      };
+    }
+    return offset;
+  }
+
   private static compileAnimation(animation: DefaultAnimation): Animation {
     let steps = FunTextCompiler.compileSteps(animation.steps);
     steps = FunTextCompiler.syncSteps(
@@ -195,10 +210,12 @@ class FunTextCompiler {
       animation.duration,
       animation.sync,
     );
+    const offset = FunTextCompiler.compileOffset(
+      animation.offset ?? FunTextCompiler.DEFAULT_ANIMATION.offset,
+    );
 
     return {
       scope: animation.scope,
-      type: animation.type ?? "default",
       property: animation.property,
       steps,
       duration,
@@ -211,7 +228,7 @@ class FunTextCompiler {
       timing: animation.timing ?? FunTextCompiler.DEFAULT_ANIMATION.timing,
       fill: animation.fill ?? FunTextCompiler.DEFAULT_ANIMATION.fill,
 
-      offset: animation.offset ?? FunTextCompiler.DEFAULT_ANIMATION.offset,
+      offset,
     };
   }
 
@@ -327,23 +344,19 @@ class FunTextCompiler {
       mergedSteps[frame] = values.join(" ");
     }
 
-    return {
+    return FunTextCompiler.compileAnimation({
       scope: animations.scope,
-      type: animations.type,
       property: animations.type,
       steps: mergedSteps,
       duration: maxLateness,
-      delay: animations.delay ?? FunTextCompiler.DEFAULT_ANIMATION.delay,
-      iteration:
-        `${animations.iteration}` ??
-        FunTextCompiler.DEFAULT_ANIMATION.iteration,
-      direction:
-        animations.direction ?? FunTextCompiler.DEFAULT_ANIMATION.direction,
-      timing: animations.timing ?? FunTextCompiler.DEFAULT_ANIMATION.timing,
-      fill: animations.fill ?? FunTextCompiler.DEFAULT_ANIMATION.fill,
+      delay: animations.delay,
+      iteration: animations.iteration,
+      direction: animations.direction,
+      timing: animations.timing,
+      fill: animations.fill,
 
-      offset: animations.offset ?? FunTextCompiler.DEFAULT_ANIMATION.offset,
-    };
+      offset: animations.offset,
+    });
   }
 
   private static addScopeAnimation(
@@ -477,7 +490,12 @@ class FunTextBuilder {
       // Word animation offset
       for (const wordAnimation of animations.word) {
         const animationName = `--offset-${wordAnimation.scope}-${wordAnimation.property}`;
-        const animationOffset = `${wordIndex * wordAnimation.offset}s`;
+        const animationOffset = `${wordAnimation.offset(
+          wordIndex,
+          letterCount,
+          words.length,
+          letters.length,
+        )}s`;
         wordElement.style.setProperty(animationName, animationOffset);
       }
 
@@ -494,7 +512,12 @@ class FunTextBuilder {
         // Letter animation offset
         for (const letterAnimation of animations.letter) {
           const animationName = `--offset-${letterAnimation.scope}-${letterAnimation.property}`;
-          const animationOffset = `${letterCount * letterAnimation.offset}s`;
+          const animationOffset = `${letterAnimation.offset(
+            wordIndex,
+            letterCount,
+            words.length,
+            letters.length,
+          )}s`;
           letterElement.style.setProperty(animationName, animationOffset);
         }
 
@@ -523,9 +546,8 @@ class FunTextBuilder {
   private static readonly KEYFRAME = "funtext-keyframe";
 
   private static readonly DEFAULT_PROPERTY_VALUE: {
-    [key in AnimationType]: string;
+    [key: string]: string;
   } = {
-    default: "inherit",
     transform: "0",
     filter: "0",
   };
@@ -544,7 +566,9 @@ class FunTextBuilder {
       const stepValue = animation.steps[Number(stepPercent)];
 
       keyframes += `${stepPercent}% { ${animation.property}: ${
-        stepValue ?? FunTextBuilder.DEFAULT_PROPERTY_VALUE[animation.type]
+        stepValue ??
+        FunTextBuilder.DEFAULT_PROPERTY_VALUE[animation.property] ??
+        "inherit"
       } }`;
     }
 
@@ -556,7 +580,7 @@ class FunTextBuilder {
   }
 
   private static buildAnimation(animation: Animation): KeyframeAnimation {
-    const name = `${FunTextBuilder.KEYFRAME}-${animation.scope}-${animation.type}`;
+    const name = `${FunTextBuilder.KEYFRAME}-${animation.scope}-${animation.property}`;
     const keyframes = FunTextBuilder.buildKeyframes(name, animation);
 
     const duration = `${animation.duration}s`;

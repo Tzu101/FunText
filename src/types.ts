@@ -17,18 +17,21 @@ export interface Options {
 */
 
 // Input animation
-type InputAnimationScope = "word" | "letter";
-
 export interface InputAnimationSync {
   duration: number;
   location: number | "start" | "middle" | "end";
 }
 
-type strnum = string | number;
-export type InputAnimationSteps = strnum | strnum[] | AnimationSteps;
+type worlet = "word" | "letter";
+export type InputScope =
+  | worlet
+  | {
+      split: string | RegExp;
+      priority: number;
+    };
 
 interface AnimationProperties {
-  scope: InputAnimationScope;
+  scope: InputScope;
 
   delay?: number;
   iteration?: number | string | "infinite";
@@ -48,6 +51,9 @@ interface AnimationProperties {
   offset?: number | AnimationOffset;
   sync?: InputAnimationSync;
 }
+
+type strnum = string | number;
+export type InputAnimationSteps = strnum | strnum[] | AnimationSteps;
 
 export type DefaultAnimation = {
   type?: "default";
@@ -104,19 +110,19 @@ export type InputAnimation =
   | FilterAnimations;
 
 // Animation
+export interface FinalScope {
+  split: string | RegExp;
+  priority: number;
+}
+
 export interface AnimationSteps {
   [key: number]: strnum | null;
 }
 
-export type AnimationOffset = (
-  wordInd: number,
-  letterInd: number,
-  wordNum: number,
-  letterNum: number,
-) => number;
+export type AnimationOffset = (priority: number, index: number) => number;
 
 export interface Animation {
-  scope: string;
+  scope: FinalScope;
   property: string;
   steps: AnimationSteps;
 
@@ -143,4 +149,15 @@ export interface KeyframeAnimation {
   direction: string;
   timing: string;
   fill: string;
+}
+
+export type KeyframeAnimations = { [key: string]: KeyframeAnimation[] };
+
+// Elements
+
+export interface FunTextElement {
+  tag: string;
+  classes: string[];
+  children: string | FunTextElement[];
+  variables?: [string, string][];
 }

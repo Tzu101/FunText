@@ -1,7 +1,7 @@
-import { off } from "process";
 import type {
   Options,
   InputOptions,
+  InputScope,
   InputAnimationSteps,
   DefaultAnimation,
   TransformAnimation,
@@ -10,11 +10,14 @@ import type {
   FilterAnimations,
   InputAnimationSync,
   InputAnimation,
+  FinalScope,
   AnimationSteps,
   AnimationOffset,
   Animation,
   ScopedAnimations,
   KeyframeAnimation,
+  KeyframeAnimations,
+  FunTextElement,
 } from "./types";
 
 class FunTextCompiler {
@@ -54,7 +57,31 @@ class FunTextCompiler {
     offset: 0.1,
   };
 
+  private static readonly DEFAULT_SPLIT = " ";
+  private static readonly SCOPE_SPLIT = {
+    word: FunTextCompiler.DEFAULT_SPLIT,
+    letter: "",
+  };
+
+  private static readonly DEFAULT_PRIORITY = 1;
+  private static readonly SCOPE_PRIORITY = {
+    word: FunTextCompiler.DEFAULT_PRIORITY,
+    letter: 3,
+  };
+
   // UTILITY
+  private static compileScope(
+    scope: "word" | "letter" | InputScope,
+  ): FinalScope {
+    if (typeof scope === "string") {
+      return {
+        split: FunTextCompiler.SCOPE_SPLIT[scope],
+        priority: FunTextCompiler.SCOPE_PRIORITY[scope],
+      };
+    }
+    return scope;
+  }
+
   private static compileSteps(steps: InputAnimationSteps): AnimationSteps {
     const compiledSteps: AnimationSteps = {};
 
@@ -187,18 +214,18 @@ class FunTextCompiler {
   private static compileOffset(offset: number | AnimationOffset) {
     if (typeof offset === "number") {
       return (
-        wordInd: number,
-        letterInd: number,
-        wordNum: number,
-        letterNum: number,
+        index: number,
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        priority: number,
       ) => {
-        return letterInd * offset;
+        return index * offset;
       };
     }
     return offset;
   }
 
   private static compileAnimation(animation: DefaultAnimation): Animation {
+    const scope = FunTextCompiler.compileScope(animation.scope);
     let steps = FunTextCompiler.compileSteps(animation.steps);
     steps = FunTextCompiler.syncSteps(
       steps,
@@ -215,7 +242,7 @@ class FunTextCompiler {
     );
 
     return {
-      scope: animation.scope,
+      scope,
       property: animation.property,
       steps,
       duration,
@@ -374,59 +401,35 @@ class FunTextCompiler {
   static compileAnimations(
     inputAnimations: InputAnimation[],
   ): ScopedAnimations {
-    const defaultAnimations: DefaultAnimation[] = [];
-    let transformAnimations: TransformAnimations | null = null;
-    let filterAnimations: FilterAnimations | null = null;
+    const uniqueAnimations = new Set<string>();
+    const scopedAnimations: ScopedAnimations = {};
 
     for (const animation of inputAnimations) {
       if (!animation.type || animation.type === "default") {
-        defaultAnimations.push(animation);
-      } else if (animation.type === "transform") {
-        transformAnimations = animation;
-      } else if (animation.type === "filter") {
-        filterAnimations = animation;
+        if (uniqueAnimations.has(animation.property)) {
+          continue;
+        } else {
+          uniqueAnimations.add(animation.property);
+        }
+
+        const compiledAnimation = FunTextCompiler.compileAnimation(animation);
+
+        FunTextCompiler.addScopeAnimation(
+          scopedAnimations,
+          compiledAnimation,
+          String(compiledAnimation.scope.priority),
+        );
+      } else if (
+        animation.type === "transform" ||
+        animation.type === "filter"
+      ) {
+        const compiledAnimation = FunTextCompiler.mergeAnimations(animation);
+        FunTextCompiler.addScopeAnimation(
+          scopedAnimations,
+          compiledAnimation,
+          String(compiledAnimation.scope.priority),
+        );
       }
-    }
-
-    const uniqueAnimations = new Set<string>();
-
-    const scopedAnimations: ScopedAnimations = {};
-    scopedAnimations.letter = [];
-    scopedAnimations.word = [];
-    for (const animation of defaultAnimations) {
-      if (uniqueAnimations.has(animation.property)) {
-        continue;
-      } else {
-        uniqueAnimations.add(animation.property);
-      }
-
-      const compiledAnimation = FunTextCompiler.compileAnimation(animation);
-
-      FunTextCompiler.addScopeAnimation(
-        scopedAnimations,
-        compiledAnimation,
-        compiledAnimation.scope,
-      );
-    }
-
-    if (transformAnimations) {
-      const compiledAnimation =
-        FunTextCompiler.mergeAnimations(transformAnimations);
-      FunTextCompiler.addScopeAnimation(
-        scopedAnimations,
-        compiledAnimation,
-        compiledAnimation.scope,
-      );
-    }
-
-    if (filterAnimations) {
-      const compiledAnimation =
-        FunTextCompiler.mergeAnimations(filterAnimations);
-      FunTextCompiler.addScopeAnimation(
-        scopedAnimations,
-        compiledAnimation,
-        compiledAnimation.scope,
-      );
     }
 
     return scopedAnimations;
@@ -439,27 +442,129 @@ class FunTextBuilder {
 	*/
 
   // CONSTANTS
-  private static readonly WORD_SPLIT = " ";
-  private static readonly LETTER_SPLIT = "";
-
-  private static readonly HTML_ELEMENT = "div";
-  private static readonly WORD_ELEMENT = "div";
-  private static readonly LETTER_ELEMENT = "p";
-  private static readonly DIVIDER_ELEMENT = "p";
+  private static readonly CONTAINER_ELEMENT = "div";
+  private static readonly TEXT_ELEMENT = "p";
+  private static readonly NEWLINE_ELEMENT = "br";
 
   // TODO: Root class, element class (funtext funtext__element funtext__element--word)
-  private static readonly ELEMENT_CLASS = "funtext__element";
-  private static readonly WORD_CLASS = `${this.ELEMENT_CLASS}--word`;
-  private static readonly LETTER_CLASS = `${this.ELEMENT_CLASS}--letter`;
-  private static readonly DIVIDER_CLASS = `${this.ELEMENT_CLASS}--divider`;
+  private static readonly BASE_CLASS = "funtext";
 
   // UTILITY
-  private static buildDivider(): HTMLElement {
-    const divider = document.createElement(FunTextBuilder.DIVIDER_ELEMENT);
-    divider.classList.add(FunTextBuilder.ELEMENT_CLASS);
-    divider.classList.add(FunTextBuilder.DIVIDER_CLASS);
+  private static sortScopes(animations: ScopedAnimations): {
+    [key: string]: (string | RegExp)[];
+  } {
+    // Sort the id of scopes by priority
+    const sortedScopes = Object.keys(animations).sort(
+      (scope1, scope2) => Number(scope1) - Number(scope2),
+    );
 
-    return divider;
+    const groupedScopes: { [key: string]: (string | RegExp)[] } = {};
+    for (const priority of sortedScopes) {
+      groupedScopes[priority] = animations[priority].map(
+        (animation) => animation.scope.split,
+      );
+    }
+
+    return groupedScopes;
+  }
+
+  private static createElement(
+    element: FunTextElement,
+    regex: string | RegExp,
+    animations: Animation[],
+    priority: string,
+    index: number,
+  ): number {
+    if (element.tag === FunTextBuilder.NEWLINE_ELEMENT) {
+      return index + 1;
+    }
+
+    if (typeof element.children === "string") {
+      const snipets = element.children.split(regex);
+      if (snipets.length > 1) {
+        element.children = [];
+        element.tag = FunTextBuilder.CONTAINER_ELEMENT;
+
+        for (const snipet of snipets) {
+          if (!snipet) {
+            continue;
+          }
+
+          // Set css classes
+          const newElement: FunTextElement = {
+            tag: FunTextBuilder.TEXT_ELEMENT,
+            classes: [
+              FunTextBuilder.BASE_CLASS,
+              `${FunTextBuilder.BASE_CLASS}--scope${priority}`,
+            ],
+            children: snipet,
+          };
+
+          // Set css variable
+          newElement.variables = [];
+          for (const animation of animations) {
+            const offsetName = `--offset-${animation.scope.priority}-${animation.property}`;
+            const offsetValue = `${animation.offset(index, Number(priority))}s`;
+            newElement.variables.push([offsetName, offsetValue]);
+          }
+
+          if (snipet === "\n") {
+            newElement.tag = FunTextBuilder.NEWLINE_ELEMENT;
+            newElement.children = "";
+          }
+
+          element.children.push(newElement);
+          index += 1;
+        }
+      } else {
+        element.classes.push(`${FunTextBuilder.BASE_CLASS}--scope${priority}`);
+
+        element.variables = [];
+        for (const animation of animations) {
+          const offsetName = `--offset-${animation.scope.priority}-${animation.property}`;
+          const offsetValue = `${animation.offset(index, Number(priority))}s`;
+          element.variables.push([offsetName, offsetValue]);
+        }
+
+        index += 1;
+      }
+    } else {
+      for (const child of element.children) {
+        index = FunTextBuilder.createElement(
+          child,
+          regex,
+          animations,
+          priority,
+          index,
+        );
+      }
+    }
+
+    return index;
+  }
+
+  private static buildElement(element: FunTextElement): HTMLElement {
+    const htmlElement = document.createElement(element.tag);
+
+    for (const cls of element.classes) {
+      htmlElement.classList.add(cls);
+    }
+
+    if (element.variables) {
+      for (const variable of element.variables) {
+        htmlElement.style.setProperty(variable[0], variable[1]);
+      }
+    }
+
+    if (typeof element.children === "string") {
+      htmlElement.innerText = element.children;
+    } else {
+      for (const child of element.children) {
+        htmlElement.appendChild(FunTextBuilder.buildElement(child));
+      }
+    }
+
+    return htmlElement;
   }
 
   // MAIN
@@ -467,29 +572,81 @@ class FunTextBuilder {
     options: Options,
     animations: ScopedAnimations,
   ): HTMLElement {
-    const html = document.createElement(FunTextBuilder.HTML_ELEMENT);
+    const root: FunTextElement = {
+      tag: FunTextBuilder.TEXT_ELEMENT,
+      classes: [FunTextBuilder.BASE_CLASS],
+      children: options.text,
+    };
+
+    const scopes = FunTextBuilder.sortScopes(animations);
+
+    for (const scopePriority of Object.keys(scopes)) {
+      const regexes: RegExp[] = [];
+
+      // Default newline break
+      regexes.push(new RegExp(`(\n)`, "g"));
+
+      let isEmptyScope = false;
+      for (const scope of scopes[scopePriority]) {
+        if (typeof scope === "string") {
+          // Empty string
+          if (scope === "") {
+            isEmptyScope = true;
+            break;
+          } else {
+            regexes.push(new RegExp(`(${scope})`, "g"));
+          }
+        } else {
+          regexes.push(scope);
+        }
+      }
+
+      let splitRegex: string | RegExp = "";
+      if (!isEmptyScope) {
+        splitRegex = new RegExp(
+          regexes.map((regex) => regex.source).join("|"),
+          "g",
+        );
+      }
+
+      // Animations of the current scope
+      const scopeAnimations = animations[scopePriority];
+
+      FunTextBuilder.createElement(
+        root,
+        splitRegex,
+        scopeAnimations,
+        scopePriority,
+        0,
+      );
+    }
+
+    return FunTextBuilder.buildElement(root);
 
     // Element tree construction
-    const words = options.text.split(FunTextBuilder.WORD_SPLIT);
+    /*const words = options.text.split(" ");
     let letterCount = 0;
     for (let wordIndex = 0; wordIndex < words.length; wordIndex++) {
       // Empty word element means its a divider
-      const letters = words[wordIndex].split(FunTextBuilder.LETTER_SPLIT);
+      const letters = words[wordIndex].split("");
       if (letters.length === 0) {
-        const divider = FunTextBuilder.buildDivider();
-        divider.innerText = FunTextBuilder.WORD_SPLIT;
+        const divider = FunTextBuilder.buildDivider(
+          FunTextBuilder.DIVIDER_ELEMENT,
+        );
+        divider.innerText = " ";
         html.appendChild(divider);
         continue;
       }
 
       // Word element init
       const wordElement = document.createElement(FunTextBuilder.WORD_ELEMENT);
-      wordElement.classList.add(FunTextBuilder.ELEMENT_CLASS);
+      wordElement.classList.add(FunTextBuilder.BASE_CLASS);
       wordElement.classList.add(FunTextBuilder.WORD_CLASS);
+      html.appendChild(wordElement);
 
       // Word animation offset
       for (const wordAnimation of animations.word) {
-        const animationName = `--offset-${wordAnimation.scope}-${wordAnimation.property}`;
+        const animationName = `--offset-${wordAnimation.scope.id}-${wordAnimation.property}`;
         const animationOffset = `${wordAnimation.offset(
           wordIndex,
           letterCount,
@@ -500,18 +657,32 @@ class FunTextBuilder {
       }
 
       // Letter elements init
-      for (let letterIndex = 0; letterIndex < letters.length; letterIndex++) {
-        letterCount++;
+      for (
+        let letterIndex = 0;
+        letterIndex < letters.length;
+        letterIndex++, letterCount++
+      ) {
+        // Newline detected
+        const letterCharacter = letters[letterIndex];
+        if (letterCharacter === FunTextBuilder.NEWLINE_STRING) {
+          const divider = FunTextBuilder.buildDivider(
+            FunTextBuilder.NEWLINE_ELEMENT,
+          );
+          html.appendChild(divider);
+          continue;
+        }
+
         const letterElement = document.createElement(
           FunTextBuilder.LETTER_ELEMENT,
         );
-        letterElement.classList.add(FunTextBuilder.ELEMENT_CLASS);
+        letterElement.classList.add(FunTextBuilder.BASE_CLASS);
         letterElement.classList.add(FunTextBuilder.LETTER_CLASS);
-        letterElement.innerText = letters[letterIndex];
+        letterElement.innerText = letterCharacter;
+        wordElement.appendChild(letterElement);
 
         // Letter animation offset
         for (const letterAnimation of animations.letter) {
-          const animationName = `--offset-${letterAnimation.scope}-${letterAnimation.property}`;
+          const animationName = `--offset-${letterAnimation.scope.id}-${letterAnimation.property}`;
           const animationOffset = `${letterAnimation.offset(
             wordIndex,
             letterCount,
@@ -520,22 +691,20 @@ class FunTextBuilder {
           )}s`;
           letterElement.style.setProperty(animationName, animationOffset);
         }
-
-        wordElement.appendChild(letterElement);
       }
-
-      html.appendChild(wordElement);
 
       // Add divider than was lost during the split operation
       if (wordIndex < words.length - 1) {
-        const divider = FunTextBuilder.buildDivider();
+        const divider = FunTextBuilder.buildDivider(
+          FunTextBuilder.DIVIDER_ELEMENT,
+        );
         // divider.innerText = FunTextBuilder.WORD_SPLIT;
         divider.innerHTML = "&nbsp;";
         html.appendChild(divider);
       }
     }
 
-    return html;
+    return html;*/
   }
 
   /*
@@ -556,6 +725,7 @@ class FunTextBuilder {
     display: inline-block;
     margin: 0;
     padding: 0;
+    white-space: pre-wrap;
   `;
 
   // UTILITY
@@ -580,11 +750,11 @@ class FunTextBuilder {
   }
 
   private static buildAnimation(animation: Animation): KeyframeAnimation {
-    const name = `${FunTextBuilder.KEYFRAME}-${animation.scope}-${animation.property}`;
+    const name = `${FunTextBuilder.KEYFRAME}-${animation.scope.priority}-${animation.property}`;
     const keyframes = FunTextBuilder.buildKeyframes(name, animation);
 
     const duration = `${animation.duration}s`;
-    const delay = `calc(${animation.delay}s + var(--offset-${animation.scope}-${animation.property}))`;
+    const delay = `calc(${animation.delay}s + var(--offset-${animation.scope.priority}-${animation.property}))`;
 
     return {
       name,
@@ -612,105 +782,72 @@ class FunTextBuilder {
     return values.join(separator);
   }
 
+  private static buildClass(
+    animations: KeyframeAnimation[],
+    priority: string,
+  ): string {
+    return `
+    .${FunTextBuilder.BASE_CLASS}--scope${priority} {
+      animation-name: ${FunTextBuilder.joinValues("name", animations, ",")};
+      animation-duration: ${FunTextBuilder.joinValues(
+        "duration",
+        animations,
+        ",",
+      )};
+      animation-delay: ${FunTextBuilder.joinValues("delay", animations, ",")};
+      animation-iteration-count: ${FunTextBuilder.joinValues(
+        "iteration",
+        animations,
+        ",",
+      )};
+      animation-direction: ${FunTextBuilder.joinValues(
+        "direction",
+        animations,
+        ",",
+      )};
+      animation-timing-function: ${FunTextBuilder.joinValues(
+        "timing",
+        animations,
+        ",",
+      )};
+      animation-fill-mode: ${FunTextBuilder.joinValues(
+        "fill",
+        animations,
+        ",",
+      )};
+    }
+    `;
+  }
+
   // MAIN
   static buildStyle(animations: ScopedAnimations): HTMLStyleElement {
-    const wordAnimations: KeyframeAnimation[] = [];
-    const letterAnimations: KeyframeAnimation[] = [];
-
-    for (const wordAnimation of animations.word) {
-      wordAnimations.push(FunTextBuilder.buildAnimation(wordAnimation));
+    const buildAnimations: KeyframeAnimations = {};
+    for (const priority of Object.keys(animations)) {
+      buildAnimations[priority] = [];
+      for (const animation of animations[priority]) {
+        buildAnimations[priority].push(
+          FunTextBuilder.buildAnimation(animation),
+        );
+      }
     }
 
-    for (const letterAnimation of animations.letter) {
-      letterAnimations.push(FunTextBuilder.buildAnimation(letterAnimation));
+    const keyframes: string[] = [];
+    const classes: string[] = [];
+    for (const priority of Object.keys(buildAnimations)) {
+      keyframes.push(
+        FunTextBuilder.joinValues("keyframes", buildAnimations[priority], "\n"),
+      );
+      classes.push(
+        FunTextBuilder.buildClass(buildAnimations[priority], priority),
+      );
     }
 
     const style = document.createElement("style");
     style.innerHTML = `
-      ${FunTextBuilder.joinValues("keyframes", wordAnimations, "\n")}
-      ${FunTextBuilder.joinValues("keyframes", letterAnimations, "\n")}
+      ${keyframes.join("\n")}
+      ${classes.join("\n")}
 
-      .${FunTextBuilder.WORD_CLASS} {
-        animation-name: ${FunTextBuilder.joinValues(
-          "name",
-          wordAnimations,
-          ",",
-        )};
-        animation-duration: ${FunTextBuilder.joinValues(
-          "duration",
-          wordAnimations,
-          ",",
-        )};
-        animation-delay: ${FunTextBuilder.joinValues(
-          "delay",
-          wordAnimations,
-          ",",
-        )};
-        animation-iteration-count: ${FunTextBuilder.joinValues(
-          "iteration",
-          wordAnimations,
-          ",",
-        )};
-        animation-direction: ${FunTextBuilder.joinValues(
-          "direction",
-          wordAnimations,
-          ",",
-        )};
-        animation-timing-function: ${FunTextBuilder.joinValues(
-          "timing",
-          wordAnimations,
-          ",",
-        )};
-        animation-fill-mode: ${FunTextBuilder.joinValues(
-          "fill",
-          wordAnimations,
-          ",",
-        )};
-      }
-      
-      .${FunTextBuilder.LETTER_CLASS} {
-        animation-name: ${FunTextBuilder.joinValues(
-          "name",
-          letterAnimations,
-          ",",
-        )};
-        animation-duration: ${FunTextBuilder.joinValues(
-          "duration",
-          letterAnimations,
-          ",",
-        )};
-        animation-delay: ${FunTextBuilder.joinValues(
-          "delay",
-          letterAnimations,
-          ",",
-        )};
-        animation-iteration-count: ${FunTextBuilder.joinValues(
-          "iteration",
-          letterAnimations,
-          ",",
-        )};
-        animation-direction: ${FunTextBuilder.joinValues(
-          "direction",
-          letterAnimations,
-          ",",
-        )};
-        animation-timing-function: ${FunTextBuilder.joinValues(
-          "timing",
-          letterAnimations,
-          ",",
-        )};
-        animation-fill-mode: ${FunTextBuilder.joinValues(
-          "fill",
-          letterAnimations,
-          ",",
-        )};
-      }
-
-      .${FunTextBuilder.DIVIDER_CLASS} {
-
-      }
-
-      .${FunTextBuilder.ELEMENT_CLASS} {
+      .${FunTextBuilder.BASE_CLASS} {
         ${FunTextBuilder.DEFAULT_CSS}
       }
       `;

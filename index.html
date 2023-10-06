@@ -9,81 +9,102 @@
   <body>
     <div id="container">Testing container</div>
     <div id="container2">Testing container</div>
+    <!---->
 
     <script>
       var exports = {};
     </script>
     <script src="/lib/index.js"></script>
     <script>
-      /*const container = document.getElementById("container");
-      const funtext = new FunText(container, [
-        {
-          scope: "letter",
-          property: "transform",
-          steps: "translate(50px, 0)",
-          iteration: "infinite",
-          duration: 3,
-          offset: -0.1,
-          delay: 1,
-        },
-      ]);
-      funtext.mount();*/
-
-      const container2 = document.getElementById("container2");
-      const funtext2 = new FunText(container2, [
-        {
-          scope: "letter",
-          property: "color",
-          duration: 1,
-          steps: "white",
-          fill: "forwards",
-          sync: {
-            location: 0,
+      const container = document.getElementById("container");
+      const funtext = new FunText(
+        container,
+        [
+          {
+            scope: "word",
+            property: "color",
+            steps: "red",
             duration: 5,
+            iteration: "infinite",
+            offset: 1,
           },
-          iteration: "infinite",
-        },
-        {
-          scope: "letter",
-          type: "transform",
-          animations: [
-            {
-              property: "translateY",
-              duration: 3.5,
-              delay: 1.5,
-              unit: "px",
-              steps: "-5",
+          {
+            scope: {
+              split: "B",
+              priority: 2,
             },
-          ],
-          iteration: "infinite",
-          fill: "forwards",
-          offset: 0.1,
-          delay: 0,
-        },
-        {
-          scope: "letter",
-          type: "filter",
-          animations: [
-            {
-              property: "opacity",
+            property: "background",
+            steps: "red",
+            duration: 5,
+            iteration: "infinite",
+            offset: 1,
+          },
+        ],
+        { text: "AABAA AABAA AABAA" },
+      );
+      funtext.mount();
+
+      /*const container2 = document.getElementById("container2");
+      const funtext2 = new FunText(
+        container2,
+        [
+          {
+            scope: "letter",
+            property: "color",
+            duration: 2,
+            steps: "white",
+            fill: "forwards",
+            sync: {
+              location: 0,
               duration: 5,
-              unit: "",
-              steps: "0",
             },
-            {
-              property: "blur",
-              duration: 5,
-              unit: "px",
-              steps: "10",
-            },
-          ],
-          iteration: "infinite",
-          fill: "forwards",
-          offset: 0.1,
-          delay: 0,
+            iteration: "infinite",
+          },
+          {
+            scope: "letter",
+            type: "transform",
+            animations: [
+              {
+                property: "translateY",
+                duration: 3.5,
+                delay: 1.5,
+                unit: "px",
+                steps: "-25",
+              },
+            ],
+            iteration: "infinite",
+            fill: "forwards",
+            offset: 0.1,
+            delay: 0,
+          },
+          {
+            scope: "letter",
+            type: "filter",
+            animations: [
+              {
+                property: "opacity",
+                duration: 5,
+                unit: "",
+                steps: "0",
+              },
+              {
+                property: "blur",
+                duration: 5,
+                unit: "px",
+                steps: "10",
+              },
+            ],
+            iteration: "infinite",
+            fill: "forwards",
+            offset: 0.1,
+            delay: 0,
+          },
+        ],
+        {
+          text: "Hello world.\n What a wonderfull day!",
         },
-      ]);
-      funtext2.mount();
+      );
+      funtext2.mount();*/
     </script>
   </body>
 </html>

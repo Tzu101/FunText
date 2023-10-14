@@ -18,6 +18,7 @@ import type {
   KeyframeAnimation,
   KeyframeAnimations,
   FunTextElement,
+  AnimationId,
 } from "./types";
 
 class FunTextCompiler {
@@ -53,6 +54,7 @@ class FunTextCompiler {
     direction: "normal",
     timing: "linear",
     fill: "none",
+    state: "running",
 
     offset: 0.1,
   };
@@ -254,6 +256,7 @@ class FunTextCompiler {
         animation.direction ?? FunTextCompiler.DEFAULT_ANIMATION.direction,
       timing: animation.timing ?? FunTextCompiler.DEFAULT_ANIMATION.timing,
       fill: animation.fill ?? FunTextCompiler.DEFAULT_ANIMATION.fill,
+      state: animation.state ?? FunTextCompiler.DEFAULT_ANIMATION.state,
 
       offset,
     };
@@ -381,6 +384,7 @@ class FunTextCompiler {
       direction: animations.direction,
       timing: animations.timing,
       fill: animations.fill,
+      state: animations.state,
 
       offset: animations.offset,
     });
@@ -401,17 +405,10 @@ class FunTextCompiler {
   static compileAnimations(
     inputAnimations: InputAnimation[],
   ): ScopedAnimations {
-    const uniqueAnimations = new Set<string>();
     const scopedAnimations: ScopedAnimations = {};
 
     for (const animation of inputAnimations) {
       if (!animation.type || animation.type === "default") {
-        if (uniqueAnimations.has(animation.property)) {
-          continue;
-        } else {
-          uniqueAnimations.add(animation.property);
-        }
-
         const compiledAnimation = FunTextCompiler.compileAnimation(animation);
 
         FunTextCompiler.addScopeAnimation(
@@ -446,7 +443,6 @@ class FunTextBuilder {
   private static readonly TEXT_ELEMENT = "p";
   private static readonly NEWLINE_ELEMENT = "br";
 
-  // TODO: Root class, element class (funtext funtext__element funtext__element--word)
   private static readonly BASE_CLASS = "funtext";
 
   // UTILITY
@@ -495,15 +491,18 @@ class FunTextBuilder {
             tag: FunTextBuilder.TEXT_ELEMENT,
             classes: [
               FunTextBuilder.BASE_CLASS,
-              `${FunTextBuilder.BASE_CLASS}--scope${priority}`,
+              FunTextBuilder.getScopeClass(priority),
             ],
             children: snipet,
+            variables: [],
           };
 
           // Set css variable
-          newElement.variables = [];
           for (const animation of animations) {
-            const offsetName = `--offset-${animation.scope.priority}-${animation.property}`;
+            const offsetName = FunTextBuilder.getOffsetVariable(
+              animation.scope.priority,
+              animation.property,
+            );
             const offsetValue = `${animation.offset(index, Number(priority))}s`;
             newElement.variables.push([offsetName, offsetValue]);
           }
@@ -517,11 +516,14 @@ class FunTextBuilder {
           index += 1;
         }
       } else {
-        element.classes.push(`${FunTextBuilder.BASE_CLASS}--scope${priority}`);
+        element.classes.push(FunTextBuilder.getScopeClass(priority));
 
         element.variables = [];
         for (const animation of animations) {
-          const offsetName = `--offset-${animation.scope.priority}-${animation.property}`;
+          const offsetName = FunTextBuilder.getOffsetVariable(
+            animation.scope.priority,
+            animation.property,
+          );
           const offsetValue = `${animation.offset(index, Number(priority))}s`;
           element.variables.push([offsetName, offsetValue]);
         }
@@ -550,10 +552,8 @@ class FunTextBuilder {
       htmlElement.classList.add(cls);
     }
 
-    if (element.variables) {
-      for (const variable of element.variables) {
-        htmlElement.style.setProperty(variable[0], variable[1]);
-      }
+    for (const variable of element.variables) {
+      htmlElement.style.setProperty(variable[0], variable[1]);
     }
 
     if (typeof element.children === "string") {
@@ -568,6 +568,24 @@ class FunTextBuilder {
   }
 
   // MAIN
+  static getScopeClass(priority: number | string): string {
+    return `${FunTextBuilder.BASE_CLASS}--scope${priority}`;
+  }
+
+  static getOffsetVariable(
+    priority: number | string,
+    property: string,
+  ): string {
+    return `--offset-${priority}-${property}`;
+  }
+
+  static getPlayStateVariable(
+    priority: number | string,
+    property: string,
+  ): string {
+    return `--play-state-${priority}-${property}`;
+  }
+
   static buildHtml(
     options: Options,
     animations: ScopedAnimations,
@@ -576,7 +594,18 @@ class FunTextBuilder {
       tag: FunTextBuilder.TEXT_ELEMENT,
       classes: [FunTextBuilder.BASE_CLASS],
       children: options.text,
+      variables: [],
     };
+
+    for (const priority of Object.keys(animations)) {
+      for (const animation of animations[priority]) {
+        const playStateVariable = FunTextBuilder.getPlayStateVariable(
+          priority,
+          animation.property,
+        );
+        root.variables.push([playStateVariable, animation.state]);
+      }
+    }
 
     const scopes = FunTextBuilder.sortScopes(animations);
 
@@ -622,89 +651,6 @@ class FunTextBuilder {
     }
 
     return FunTextBuilder.buildElement(root);
-
-    // Element tree construction
-    /*const words = options.text.split(" ");
-    let letterCount = 0;
-    for (let wordIndex = 0; wordIndex < words.length; wordIndex++) {
-      // Empty word element means its a divider
-      const letters = words[wordIndex].split("");
-      if (letters.length === 0) {
-        const divider = FunTextBuilder.buildDivider(
-          FunTextBuilder.DIVIDER_ELEMENT,
-        );
-        divider.innerText = " ";
-        html.appendChild(divider);
-        continue;
-      }
-
-      // Word element init
-      const wordElement = document.createElement(FunTextBuilder.WORD_ELEMENT);
-      wordElement.classList.add(FunTextBuilder.BASE_CLASS);
-      wordElement.classList.add(FunTextBuilder.WORD_CLASS);
-      html.appendChild(wordElement);
-
-      // Word animation offset
-      for (const wordAnimation of animations.word) {
-        const animationName = `--offset-${wordAnimation.scope.id}-${wordAnimation.property}`;
-        const animationOffset = `${wordAnimation.offset(
-          wordIndex,
-          letterCount,
-          words.length,
-          letters.length,
-        )}s`;
-        wordElement.style.setProperty(animationName, animationOffset);
-      }
-
-      // Letter elements init
-      for (
-        let letterIndex = 0;
-        letterIndex < letters.length;
-        letterIndex++, letterCount++
-      ) {
-        // Newline detected
-        const letterCharacter = letters[letterIndex];
-        if (letterCharacter === FunTextBuilder.NEWLINE_STRING) {
-          const divider = FunTextBuilder.buildDivider(
-            FunTextBuilder.NEWLINE_ELEMENT,
-          );
-          html.appendChild(divider);
-          continue;
-        }
-
-        const letterElement = document.createElement(
-          FunTextBuilder.LETTER_ELEMENT,
-        );
-        letterElement.classList.add(FunTextBuilder.BASE_CLASS);
-        letterElement.classList.add(FunTextBuilder.LETTER_CLASS);
-        letterElement.innerText = letterCharacter;
-        wordElement.appendChild(letterElement);
-
-        // Letter animation offset
-        for (const letterAnimation of animations.letter) {
-          const animationName = `--offset-${letterAnimation.scope.id}-${letterAnimation.property}`;
-          const animationOffset = `${letterAnimation.offset(
-            wordIndex,
-            letterCount,
-            words.length,
-            letters.length,
-          )}s`;
-          letterElement.style.setProperty(animationName, animationOffset);
-        }
-      }
-
-      // Add divider than was lost during the split operation
-      if (wordIndex < words.length - 1) {
-        const divider = FunTextBuilder.buildDivider(
-          FunTextBuilder.DIVIDER_ELEMENT,
-        );
-        // divider.innerText = FunTextBuilder.WORD_SPLIT;
-        divider.innerHTML = "&nbsp;";
-        html.appendChild(divider);
-      }
-    }
-
-    return html;*/
   }
 
   /*
@@ -750,11 +696,24 @@ class FunTextBuilder {
   }
 
   private static buildAnimation(animation: Animation): KeyframeAnimation {
-    const name = `${FunTextBuilder.KEYFRAME}-${animation.scope.priority}-${animation.property}`;
+    const name = FunTextBuilder.getKeyframesName(
+      animation.scope.priority,
+      animation.property,
+    );
     const keyframes = FunTextBuilder.buildKeyframes(name, animation);
 
     const duration = `${animation.duration}s`;
-    const delay = `calc(${animation.delay}s + var(--offset-${animation.scope.priority}-${animation.property}))`;
+    const delay = `calc(${
+      animation.delay
+    }s + var(${FunTextBuilder.getOffsetVariable(
+      animation.scope.priority,
+      animation.property,
+    )}))`;
+
+    const state = `var(${FunTextBuilder.getPlayStateVariable(
+      animation.scope.priority,
+      animation.property,
+    )})`;
 
     return {
       name,
@@ -765,6 +724,7 @@ class FunTextBuilder {
       direction: animation.direction,
       timing: animation.timing,
       fill: animation.fill,
+      state,
     };
   }
 
@@ -787,7 +747,7 @@ class FunTextBuilder {
     priority: string,
   ): string {
     return `
-    .${FunTextBuilder.BASE_CLASS}--scope${priority} {
+    .${FunTextBuilder.getScopeClass(priority)} {
       animation-name: ${FunTextBuilder.joinValues("name", animations, ",")};
       animation-duration: ${FunTextBuilder.joinValues(
         "duration",
@@ -815,19 +775,27 @@ class FunTextBuilder {
         animations,
         ",",
       )};
+      animation-play-state: ${FunTextBuilder.joinValues(
+        "state",
+        animations,
+        ",",
+      )};
     }
     `;
   }
 
   // MAIN
+  static getKeyframesName(priority: number | string, property: string): string {
+    return `${FunTextBuilder.KEYFRAME}-${priority}-${property}`;
+  }
+
   static buildStyle(animations: ScopedAnimations): HTMLStyleElement {
     const buildAnimations: KeyframeAnimations = {};
     for (const priority of Object.keys(animations)) {
       buildAnimations[priority] = [];
       for (const animation of animations[priority]) {
-        buildAnimations[priority].push(
-          FunTextBuilder.buildAnimation(animation),
-        );
+        const buildAnimation = FunTextBuilder.buildAnimation(animation);
+        buildAnimations[priority].push(buildAnimation);
       }
     }
 
@@ -851,6 +819,7 @@ class FunTextBuilder {
         ${FunTextBuilder.DEFAULT_CSS}
       }
       `;
+
     return style;
   }
 }
@@ -876,6 +845,7 @@ export class FunText {
     this.shadowRoot = container.attachShadow({ mode: "closed" });
   }
 
+  // Build text
   mount() {
     this.shadowRoot.innerHTML = "";
 
@@ -889,5 +859,151 @@ export class FunText {
     this.shadowRoot.appendChild(document.createElement("slot"));
   }
 
-  // animation-play-state
+  // Get info
+  private getInlineVariables(element: HTMLElement): string[] {
+    const inlineStyle = element.getAttribute("style") ?? "";
+    const styleDeclarations = inlineStyle.split(";");
+    return styleDeclarations
+      .map((dec) => dec.split(":")[0].trim())
+      .filter(
+        (dec) => dec.startsWith("--") && element.style.getPropertyValue(dec),
+      );
+  }
+
+  private getPlayStateVariable(id: AnimationId): string {
+    return FunTextBuilder.getPlayStateVariable(id.scope, id.property);
+  }
+
+  private getPlayingState(id: string): string {
+    return this.html.style.getPropertyValue(id);
+  }
+
+  isPlaying(id: AnimationId): boolean {
+    const playStateVariable = this.getPlayStateVariable(id);
+    return this.getPlayingState(playStateVariable) === "running";
+  }
+  isPlayingAny(): boolean {
+    const variables = this.getInlineVariables(this.html);
+    for (const variable of variables) {
+      if (this.getPlayingState(variable) === "running") {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  isPaused(id: AnimationId): boolean {
+    const playStateVariable = this.getPlayStateVariable(id);
+    return this.getPlayingState(playStateVariable) === "paused";
+  }
+  isPausedAny(): boolean {
+    const variables = this.getInlineVariables(this.html);
+    for (const variable of variables) {
+      if (this.getPlayingState(variable) === "paused") {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // Toggle animation/s
+  private setPlayState(id: string | AnimationId, state: boolean) {
+    const playStateVariable =
+      typeof id === "string" ? id : this.getPlayStateVariable(id);
+    const playState = state ? "running" : "paused";
+    this.html.style.setProperty(playStateVariable, playState);
+  }
+
+  toggle(id: AnimationId) {
+    this.setPlayState(id, !this.isPlaying(id));
+  }
+  toggleAll() {
+    const variables = this.getInlineVariables(this.html);
+    for (const variable of variables) {
+      this.setPlayState(
+        variable,
+        !(this.getPlayingState(variable) === "running"),
+      );
+    }
+  }
+
+  play(id: AnimationId, state = true) {
+    this.setPlayState(id, state);
+  }
+  playAll(state = true) {
+    const variables = this.getInlineVariables(this.html);
+    for (const variable of variables) {
+      this.setPlayState(variable, state);
+    }
+  }
+
+  pause(id: AnimationId) {
+    this.setPlayState(id, false);
+  }
+  pauseAll() {
+    const variables = this.getInlineVariables(this.html);
+    for (const variable of variables) {
+      this.setPlayState(variable, false);
+    }
+  }
+
+  // Reset animation/s
+  reset(id: AnimationId) {
+    const targetRule = FunTextBuilder.getKeyframesName(id.scope, id.property);
+
+    const sheet = this.style.sheet;
+
+    if (!sheet) return;
+
+    // Isolates keyframes rules
+    const rules = Array.from(sheet.cssRules);
+    for (let r = 0; r < rules.length; r++) {
+      const rule = rules[r];
+
+      if (rule instanceof CSSKeyframesRule) {
+        if (rule.name === targetRule) {
+          sheet.deleteRule(r);
+
+          // Forces the stylesheet to reset
+          void this.style.offsetHeight;
+
+          sheet.insertRule(rule.cssText);
+
+          break;
+        }
+      }
+    }
+  }
+
+  resetAll() {
+    const sheet = this.style.sheet;
+
+    if (!sheet) return;
+
+    // Isolates keyframes rules
+    const rules = Array.from(sheet.cssRules);
+    const deletedIndexes: number[] = [];
+    const deletedRules: CSSKeyframesRule[] = [];
+    for (let r = 0; r < rules.length; r++) {
+      const rule = rules[r];
+
+      if (rule instanceof CSSKeyframesRule) {
+        deletedIndexes.push(r);
+        deletedRules.push(rule);
+      }
+    }
+
+    // Deletes in reverse order!
+    for (const deletedIndex of deletedIndexes.reverse()) {
+      sheet.deleteRule(deletedIndex);
+    }
+
+    // Forces the stylesheet to reset
+    void this.style.offsetHeight;
+
+    // Readds the rules
+    for (const deletedRule of deletedRules) {
+      sheet.insertRule(deletedRule.cssText);
+    }
+  }
 }

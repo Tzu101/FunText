@@ -46,6 +46,7 @@ interface AnimationProperties {
     | "step-end";
   // TODO `custom:${string}`
   fill?: "none" | "forwards" | "backwards" | "both" | "initial" | "inherit";
+  state?: "running" | "paused";
 
   // TODO: Offset calculate function
   offset?: number | AnimationOffset;
@@ -132,6 +133,7 @@ export interface Animation {
   direction: string;
   timing: string;
   fill: string;
+  state: string;
 
   offset: AnimationOffset;
 }
@@ -149,15 +151,21 @@ export interface KeyframeAnimation {
   direction: string;
   timing: string;
   fill: string;
+  state: string;
 }
 
 export type KeyframeAnimations = { [key: string]: KeyframeAnimation[] };
 
 // Elements
-
 export interface FunTextElement {
   tag: string;
   classes: string[];
   children: string | FunTextElement[];
-  variables?: [string, string][];
+  variables: [string, string][];
+}
+
+// FunText
+export interface AnimationId {
+  scope: number;
+  property: string;
 }

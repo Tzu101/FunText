@@ -3,20 +3,27 @@
 */
 
 // Input option
-export type DefaultProperties = Omit<AnimationProperties, "scope">;
+type DefaultProperties = Omit<AnimationProperties, "scope">;
 
-export interface NodeTags {
+interface NodeTags {
   container?: string;
   text?: string;
   break?: string;
 }
 
-export interface CSSClasses {
-  all?: string;
+interface CSSClasses {
+  global?: string;
   root?: string;
   container?: string;
   text?: string;
   break?: string;
+  raw?: string;
+}
+
+interface Accessibility {
+  aria?: boolean;
+  prefersContrast?: number;
+  prefersReducedMotion?: boolean;
 }
 
 export interface InputOptions {
@@ -24,6 +31,9 @@ export interface InputOptions {
   defaults?: DefaultProperties;
   nodes?: NodeTags;
   css?: CSSClasses;
+  attributes?: { [key: string]: string };
+  accessibility?: Accessibility;
+  javascriptAccess?: boolean;
 }
 
 // Options
@@ -32,6 +42,9 @@ export interface Options {
   defaults: Required<DefaultProperties>;
   nodes: Required<NodeTags>;
   css: Required<CSSClasses>;
+  attributes: { [key: string]: string };
+  accessibility: Required<Accessibility>;
+  javascriptAccess: boolean;
 }
 
 /*

@@ -18,7 +18,7 @@
     </script>
     <script src="/lib/index.js"></script>
     <script>
-      const container3 = document.getElementById("container3");
+      /*const container3 = document.getElementById("container3");
       const funtext3 = new FunText(container3, [
         {
           scope: "word",
@@ -51,7 +51,7 @@
           offset: 0.1,
         },
       ]);
-      funtext3.mount();
+      funtext3.mount();*/
 
       /*const container = document.getElementById("container1");
       const funtext = new FunText(
@@ -143,7 +143,7 @@
       );
       funtext2.mount();*/
 
-      /*const animations = [
+      const animations = [
         {
           scope: "letter",
           property: "color",
@@ -172,11 +172,23 @@
         },
       ];
 
+      const options = {
+        css: {
+          container: "font-size: 20px;",
+        },
+        attributes: {
+          id: "test",
+        },
+        accessibility: {
+          aria: false,
+        },
+      };
+
       const container1 = document.getElementById("container1");
-      const funtext1 = new FunText(container1, animations);
+      const funtext1 = new FunText(container1, animations, options);
       funtext1.mount();
 
-      const container2 = document.getElementById("container2");
+      /*const container2 = document.getElementById("container2");
       const funtext2 = new FunText(container2, animations);
       funtext2.mount();
 

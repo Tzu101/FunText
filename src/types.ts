@@ -2,14 +2,36 @@
   OPTIONS
 */
 
-// Input options
+// Input option
+export type DefaultProperties = Omit<AnimationProperties, "scope">;
+
+export interface NodeTags {
+  container?: string;
+  text?: string;
+  break?: string;
+}
+
+export interface CSSClasses {
+  all?: string;
+  root?: string;
+  container?: string;
+  text?: string;
+  break?: string;
+}
+
 export interface InputOptions {
   text?: string;
+  defaults?: DefaultProperties;
+  nodes?: NodeTags;
+  css?: CSSClasses;
 }
 
 // Options
 export interface Options {
   text: string;
+  defaults: Required<DefaultProperties>;
+  nodes: Required<NodeTags>;
+  css: Required<CSSClasses>;
 }
 
 /*
@@ -44,11 +66,9 @@ interface AnimationProperties {
     | "linear"
     | "step-start"
     | "step-end";
-  // TODO `custom:${string}`
   fill?: "none" | "forwards" | "backwards" | "both" | "initial" | "inherit";
   state?: "running" | "paused";
 
-  // TODO: Offset calculate function
   offset?: number | AnimationOffset;
   sync?: InputAnimationSync;
 }

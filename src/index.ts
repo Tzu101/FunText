@@ -988,7 +988,7 @@ export class FunText {
   private animations: ScopedAnimations;
   private html: HTMLElement[];
   private style: HTMLStyleElement;
-  private shadowRoot: ShadowRoot;
+  private shadowRoot: ShadowRoot | null;
 
   constructor(
     container: HTMLElement,
@@ -1004,12 +1004,19 @@ export class FunText {
     this.html = FunTextBuilder.buildHtml(this.options, this.animations);
     this.style = FunTextBuilder.buildStyle(this.options, this.animations);
 
-    const shadowMode = this.options.javascriptAccess ? "open" : "closed";
-    this.shadowRoot = container.attachShadow({ mode: shadowMode });
+    this.shadowRoot = this.getShadowRoot(container, this.options);
+    if (!this.shadowRoot) {
+      console.warn("Could not access container shadow root");
+    }
   }
 
   // Build text
   mount() {
+    if (!this.shadowRoot) {
+      console.warn("Shadow root not available");
+      return;
+    }
+
     this.shadowRoot.innerHTML = "";
 
     for (const htmlElement of this.html) {
@@ -1019,12 +1026,44 @@ export class FunText {
   }
 
   unmount() {
-    this.shadowRoot.innerHTML = "";
+    if (!this.shadowRoot) {
+      console.warn("Shadow root not available");
+      return;
+    }
 
+    this.shadowRoot.innerHTML = "";
     this.shadowRoot.appendChild(document.createElement("slot"));
   }
 
+  // Change container
+  relocate(container: HTMLElement) {
+    const newShadow = this.getShadowRoot(container, this.options);
+
+    if (newShadow) {
+      this.unmount();
+      this.shadowRoot = newShadow;
+      this.mount();
+    } else {
+      console.warn("Could not access container shadow root");
+    }
+  }
+
   // Get info
+  private getShadowRoot(
+    container: HTMLElement,
+    options: Options,
+  ): ShadowRoot | null {
+    try {
+      const shadowMode = options.javascriptAccess ? "open" : "closed";
+      const shadowRoot = container.attachShadow({ mode: shadowMode });
+
+      return shadowRoot;
+    } catch (err) {
+      console.error(err);
+    }
+    return null;
+  }
+
   private getInlineVariables(element: HTMLElement): string[] {
     const inlineStyle = element.getAttribute("style") ?? "";
     const styleDeclarations = inlineStyle.split(";");

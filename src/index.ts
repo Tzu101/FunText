@@ -1,4 +1,7 @@
 import type {
+  DefaultProperties,
+  NodeTags,
+  CSSClasses,
   Options,
   InputOptions,
   InputScope,
@@ -29,7 +32,53 @@ class FunTextCompiler {
   // CONSTANTS
   private static readonly DEFAULT_OPTIONS: Options = {
     text: "",
+    defaults: {
+      delay: 0,
+      iteration: "1",
+      direction: "normal",
+      timing: "linear",
+      fill: "none",
+      state: "running",
+
+      offset: 0.1,
+      sync: {
+        location: 0,
+        duration: 0,
+      },
+    },
+    nodes: {
+      container: "div",
+      text: "p",
+      break: "br",
+    },
+    css: {
+      all: `
+        display: inline-block;
+        margin: 0;
+        padding: 0;
+        white-space: pre-wrap;
+      `,
+      root: "",
+      container: "",
+      text: "",
+      break: "",
+    },
   };
+
+  // UTILITY
+  private static compileDefaults(
+    inputDefaults: DefaultProperties,
+  ): Required<DefaultProperties> {
+    return { ...FunTextCompiler.DEFAULT_OPTIONS.defaults, ...inputDefaults };
+  }
+
+  private static compileNodes(inputNodes: NodeTags): Required<NodeTags> {
+    return { ...FunTextCompiler.DEFAULT_OPTIONS.nodes, ...inputNodes };
+  }
+
+  private static compileCSS(inputCSS: CSSClasses): Required<CSSClasses> {
+    return { ...FunTextCompiler.DEFAULT_OPTIONS.css, ...inputCSS };
+  }
 
   // MAIN
   static compileOptions(
@@ -38,7 +87,19 @@ class FunTextCompiler {
   ): Options {
     const options = { ...FunTextCompiler.DEFAULT_OPTIONS };
 
-    options.text = inputOptions?.text ?? containerText;
+    options.text =
+      inputOptions?.text ??
+      containerText ??
+      FunTextCompiler.DEFAULT_OPTIONS.text;
+    options.defaults = inputOptions?.defaults
+      ? FunTextCompiler.compileDefaults(inputOptions.defaults)
+      : FunTextCompiler.DEFAULT_OPTIONS.defaults;
+    options.nodes = inputOptions?.nodes
+      ? FunTextCompiler.compileNodes(inputOptions.nodes)
+      : FunTextCompiler.DEFAULT_OPTIONS.nodes;
+    options.css = inputOptions?.css
+      ? FunTextCompiler.compileCSS(inputOptions.css)
+      : FunTextCompiler.DEFAULT_OPTIONS.css;
 
     return options;
   }
@@ -48,17 +109,6 @@ class FunTextCompiler {
   */
 
   //CONSTANTS
-  private static readonly DEFAULT_ANIMATION = {
-    delay: 0,
-    iteration: "1",
-    direction: "normal",
-    timing: "linear",
-    fill: "none",
-    state: "running",
-
-    offset: 0.1,
-  };
-
   private static readonly DEFAULT_SPLIT = " ";
   private static readonly SCOPE_SPLIT = {
     word: FunTextCompiler.DEFAULT_SPLIT,
@@ -226,7 +276,10 @@ class FunTextCompiler {
     return offset;
   }
 
-  private static compileAnimation(animation: DefaultAnimation): Animation {
+  private static compileAnimation(
+    animation: DefaultAnimation,
+    options: Options,
+  ): Animation {
     const scope = FunTextCompiler.compileScope(animation.scope);
     let steps = FunTextCompiler.compileSteps(animation.steps);
     steps = FunTextCompiler.syncSteps(
@@ -240,7 +293,7 @@ class FunTextCompiler {
       animation.sync,
     );
     const offset = FunTextCompiler.compileOffset(
-      animation.offset ?? FunTextCompiler.DEFAULT_ANIMATION.offset,
+      animation.offset ?? options.defaults.offset,
     );
 
     return {
@@ -249,14 +302,12 @@ class FunTextCompiler {
       steps,
       duration,
 
-      delay: animation.delay ?? FunTextCompiler.DEFAULT_ANIMATION.delay,
-      iteration:
-        `${animation.iteration}` ?? FunTextCompiler.DEFAULT_ANIMATION.iteration,
-      direction:
-        animation.direction ?? FunTextCompiler.DEFAULT_ANIMATION.direction,
-      timing: animation.timing ?? FunTextCompiler.DEFAULT_ANIMATION.timing,
-      fill: animation.fill ?? FunTextCompiler.DEFAULT_ANIMATION.fill,
-      state: animation.state ?? FunTextCompiler.DEFAULT_ANIMATION.state,
+      delay: animation.delay ?? options.defaults.delay,
+      iteration: `${animation.iteration}` ?? options.defaults.iteration,
+      direction: animation.direction ?? options.defaults.direction,
+      timing: animation.timing ?? options.defaults.timing,
+      fill: animation.fill ?? options.defaults.fill,
+      state: animation.state ?? options.defaults.state,
 
       offset,
     };
@@ -264,6 +315,7 @@ class FunTextCompiler {
 
   private static mergeAnimations(
     animations: TransformAnimations | FilterAnimations,
+    options: Options,
   ): Animation {
     const uniqueAnimations = new Set<string>();
 
@@ -374,20 +426,23 @@ class FunTextCompiler {
       mergedSteps[frame] = values.join(" ");
     }
 
-    return FunTextCompiler.compileAnimation({
-      scope: animations.scope,
-      property: animations.type,
-      steps: mergedSteps,
-      duration: maxLateness,
-      delay: animations.delay,
-      iteration: animations.iteration,
-      direction: animations.direction,
-      timing: animations.timing,
-      fill: animations.fill,
-      state: animations.state,
+    return FunTextCompiler.compileAnimation(
+      {
+        scope: animations.scope,
+        property: animations.type,
+        steps: mergedSteps,
+        duration: maxLateness,
+        delay: animations.delay,
+        iteration: animations.iteration,
+        direction: animations.direction,
+        timing: animations.timing,
+        fill: animations.fill,
+        state: animations.state,
 
-      offset: animations.offset,
-    });
+        offset: animations.offset,
+      },
+      options,
+    );
   }
 
   private static addScopeAnimation(
@@ -404,12 +459,16 @@ class FunTextCompiler {
   // MAIN
   static compileAnimations(
     inputAnimations: InputAnimation[],
+    options: Options,
   ): ScopedAnimations {
     const scopedAnimations: ScopedAnimations = {};
 
     for (const animation of inputAnimations) {
       if (!animation.type || animation.type === "default") {
-        const compiledAnimation = FunTextCompiler.compileAnimation(animation);
+        const compiledAnimation = FunTextCompiler.compileAnimation(
+          animation,
+          options,
+        );
 
         FunTextCompiler.addScopeAnimation(
           scopedAnimations,
@@ -420,7 +479,10 @@ class FunTextCompiler {
         animation.type === "transform" ||
         animation.type === "filter"
       ) {
-        const compiledAnimation = FunTextCompiler.mergeAnimations(animation);
+        const compiledAnimation = FunTextCompiler.mergeAnimations(
+          animation,
+          options,
+        );
         FunTextCompiler.addScopeAnimation(
           scopedAnimations,
           compiledAnimation,
@@ -439,11 +501,10 @@ class FunTextBuilder {
 	*/
 
   // CONSTANTS
-  private static readonly CONTAINER_ELEMENT = "div";
-  private static readonly TEXT_ELEMENT = "p";
-  private static readonly NEWLINE_ELEMENT = "br";
-
-  private static readonly BASE_CLASS = "funtext";
+  private static readonly ROOT_CLASS = "funtext";
+  private static readonly CONTAINER_CLASS = `${this.ROOT_CLASS}__container`;
+  private static readonly TEXT_CLASS = `${this.ROOT_CLASS}__text`;
+  private static readonly BREAK_CLASS = `${this.ROOT_CLASS}__break`;
 
   // UTILITY
   private static sortScopes(animations: ScopedAnimations): {
@@ -470,8 +531,9 @@ class FunTextBuilder {
     animations: Animation[],
     priority: string,
     index: number,
+    options: Options,
   ): number {
-    if (element.tag === FunTextBuilder.NEWLINE_ELEMENT) {
+    if (element.tag === options.nodes.break) {
       return index + 1;
     }
 
@@ -479,7 +541,11 @@ class FunTextBuilder {
       const snipets = element.children.split(regex);
       if (snipets.length > 1) {
         element.children = [];
-        element.tag = FunTextBuilder.CONTAINER_ELEMENT;
+        element.tag = options.nodes.container;
+        element.classes = element.classes.filter(
+          (cls) => cls !== FunTextBuilder.TEXT_CLASS,
+        );
+        element.classes.push(FunTextBuilder.CONTAINER_CLASS);
 
         for (const snipet of snipets) {
           if (!snipet) {
@@ -488,14 +554,19 @@ class FunTextBuilder {
 
           // Set css classes
           const newElement: FunTextElement = {
-            tag: FunTextBuilder.TEXT_ELEMENT,
-            classes: [
-              FunTextBuilder.BASE_CLASS,
-              FunTextBuilder.getScopeClass(priority),
-            ],
+            tag: options.nodes.text,
+            classes: [FunTextBuilder.getScopeClass(priority)],
             children: snipet,
             variables: [],
           };
+
+          if (snipet === "\n") {
+            newElement.tag = options.nodes.break;
+            newElement.children = "";
+            newElement.classes.push(FunTextBuilder.BREAK_CLASS);
+          } else {
+            newElement.classes.push(FunTextBuilder.TEXT_CLASS);
+          }
 
           // Set css variable
           for (const animation of animations) {
@@ -505,11 +576,6 @@ class FunTextBuilder {
             );
             const offsetValue = `${animation.offset(index, Number(priority))}s`;
             newElement.variables.push([offsetName, offsetValue]);
-          }
-
-          if (snipet === "\n") {
-            newElement.tag = FunTextBuilder.NEWLINE_ELEMENT;
-            newElement.children = "";
           }
 
           element.children.push(newElement);
@@ -538,6 +604,7 @@ class FunTextBuilder {
           animations,
           priority,
           index,
+          options,
         );
       }
     }
@@ -569,7 +636,7 @@ class FunTextBuilder {
 
   // MAIN
   static getScopeClass(priority: number | string): string {
-    return `${FunTextBuilder.BASE_CLASS}--scope${priority}`;
+    return `${FunTextBuilder.ROOT_CLASS}--scope${priority}`;
   }
 
   static getOffsetVariable(
@@ -591,8 +658,8 @@ class FunTextBuilder {
     animations: ScopedAnimations,
   ): HTMLElement {
     const root: FunTextElement = {
-      tag: FunTextBuilder.TEXT_ELEMENT,
-      classes: [FunTextBuilder.BASE_CLASS],
+      tag: options.nodes.text,
+      classes: [FunTextBuilder.ROOT_CLASS, FunTextBuilder.CONTAINER_CLASS],
       children: options.text,
       variables: [],
     };
@@ -647,6 +714,7 @@ class FunTextBuilder {
         scopeAnimations,
         scopePriority,
         0,
+        options,
       );
     }
 
@@ -666,13 +734,6 @@ class FunTextBuilder {
     transform: "0",
     filter: "0",
   };
-
-  private static readonly DEFAULT_CSS = `
-    display: inline-block;
-    margin: 0;
-    padding: 0;
-    white-space: pre-wrap;
-  `;
 
   // UTILITY
   private static buildKeyframes(name: string, animation: Animation): string {
@@ -789,7 +850,10 @@ class FunTextBuilder {
     return `${FunTextBuilder.KEYFRAME}-${priority}-${property}`;
   }
 
-  static buildStyle(animations: ScopedAnimations): HTMLStyleElement {
+  static buildStyle(
+    options: Options,
+    animations: ScopedAnimations,
+  ): HTMLStyleElement {
     const buildAnimations: KeyframeAnimations = {};
     for (const priority of Object.keys(animations)) {
       buildAnimations[priority] = [];
@@ -815,8 +879,24 @@ class FunTextBuilder {
       ${keyframes.join("\n")}
       ${classes.join("\n")}
 
-      .${FunTextBuilder.BASE_CLASS} {
-        ${FunTextBuilder.DEFAULT_CSS}
+      .${FunTextBuilder.ROOT_CLASS} {
+        ${options.css.all}
+        ${options.css.root}
+      }
+
+      .${FunTextBuilder.CONTAINER_CLASS} {
+        ${options.css.all}
+        ${options.css.container}
+      }
+
+      .${FunTextBuilder.TEXT_CLASS} {
+        ${options.css.all}
+        ${options.css.text}
+      }
+
+      .${FunTextBuilder.BREAK_CLASS} {
+        ${options.css.all}
+        ${options.css.break}
       }
       `;
 
@@ -837,10 +917,13 @@ export class FunText {
     options?: InputOptions,
   ) {
     this.options = FunTextCompiler.compileOptions(options, container.innerText);
-    this.animations = FunTextCompiler.compileAnimations(animations);
+    this.animations = FunTextCompiler.compileAnimations(
+      animations,
+      this.options,
+    );
 
     this.html = FunTextBuilder.buildHtml(this.options, this.animations);
-    this.style = FunTextBuilder.buildStyle(this.animations);
+    this.style = FunTextBuilder.buildStyle(this.options, this.animations);
 
     this.shadowRoot = container.attachShadow({ mode: "closed" });
   }

@@ -1,7 +1,4 @@
 import type {
-  DefaultProperties,
-  NodeTags,
-  CSSClasses,
   Options,
   InputOptions,
   InputScope,
@@ -52,7 +49,7 @@ class FunTextCompiler {
       break: "br",
     },
     css: {
-      all: `
+      global: `
         display: inline-block;
         margin: 0;
         padding: 0;
@@ -62,44 +59,66 @@ class FunTextCompiler {
       container: "",
       text: "",
       break: "",
+      raw: "",
     },
+    attributes: {},
+    accessibility: {
+      aria: true,
+      prefersContrast: 0.15,
+      prefersReducedMotion: false,
+    },
+    javascriptAccess: false,
   };
-
-  // UTILITY
-  private static compileDefaults(
-    inputDefaults: DefaultProperties,
-  ): Required<DefaultProperties> {
-    return { ...FunTextCompiler.DEFAULT_OPTIONS.defaults, ...inputDefaults };
-  }
-
-  private static compileNodes(inputNodes: NodeTags): Required<NodeTags> {
-    return { ...FunTextCompiler.DEFAULT_OPTIONS.nodes, ...inputNodes };
-  }
-
-  private static compileCSS(inputCSS: CSSClasses): Required<CSSClasses> {
-    return { ...FunTextCompiler.DEFAULT_OPTIONS.css, ...inputCSS };
-  }
 
   // MAIN
   static compileOptions(
     inputOptions: InputOptions | undefined,
     containerText: string,
   ): Options {
-    const options = { ...FunTextCompiler.DEFAULT_OPTIONS };
+    const options = FunTextCompiler.DEFAULT_OPTIONS;
 
     options.text =
       inputOptions?.text ??
       containerText ??
       FunTextCompiler.DEFAULT_OPTIONS.text;
-    options.defaults = inputOptions?.defaults
-      ? FunTextCompiler.compileDefaults(inputOptions.defaults)
-      : FunTextCompiler.DEFAULT_OPTIONS.defaults;
-    options.nodes = inputOptions?.nodes
-      ? FunTextCompiler.compileNodes(inputOptions.nodes)
-      : FunTextCompiler.DEFAULT_OPTIONS.nodes;
-    options.css = inputOptions?.css
-      ? FunTextCompiler.compileCSS(inputOptions.css)
-      : FunTextCompiler.DEFAULT_OPTIONS.css;
+
+    if (!inputOptions) {
+      return options;
+    }
+
+    if (inputOptions.defaults) {
+      options.defaults = {
+        ...FunTextCompiler.DEFAULT_OPTIONS.defaults,
+        ...inputOptions.defaults,
+      };
+    }
+    if (inputOptions.nodes) {
+      options.nodes = {
+        ...FunTextCompiler.DEFAULT_OPTIONS.nodes,
+        ...inputOptions.nodes,
+      };
+    }
+    if (inputOptions.css) {
+      options.css = {
+        ...FunTextCompiler.DEFAULT_OPTIONS.css,
+        ...inputOptions.css,
+      };
+    }
+    if (inputOptions.attributes) {
+      options.attributes = {
+        ...FunTextCompiler.DEFAULT_OPTIONS.attributes,
+        ...inputOptions.attributes,
+      };
+    }
+    if (inputOptions.accessibility) {
+      options.accessibility = {
+        ...FunTextCompiler.DEFAULT_OPTIONS.accessibility,
+        ...inputOptions.accessibility,
+      };
+    }
+    if (inputOptions.javascriptAccess) {
+      options.javascriptAccess = inputOptions.javascriptAccess;
+    }
 
     return options;
   }
@@ -656,7 +675,7 @@ class FunTextBuilder {
   static buildHtml(
     options: Options,
     animations: ScopedAnimations,
-  ): HTMLElement {
+  ): HTMLElement[] {
     const root: FunTextElement = {
       tag: options.nodes.text,
       classes: [FunTextBuilder.ROOT_CLASS, FunTextBuilder.CONTAINER_CLASS],
@@ -718,7 +737,26 @@ class FunTextBuilder {
       );
     }
 
-    return FunTextBuilder.buildElement(root);
+    const html: HTMLElement[] = [];
+    const rootElement = FunTextBuilder.buildElement(root);
+    html.push(rootElement);
+
+    // Accessibility aria
+    if (options.accessibility.aria) {
+      console.log(options);
+      const aria = document.createElement("p");
+      aria.setAttribute("aria-label", options.text);
+      html.push(aria);
+
+      rootElement.setAttribute("aria-hidden", "true");
+    }
+
+    // Add user specefied attribues
+    for (const attribute of Object.keys(options.attributes)) {
+      rootElement.setAttribute(attribute, options.attributes[attribute]);
+    }
+
+    return html;
   }
 
   /*
@@ -874,30 +912,71 @@ class FunTextBuilder {
       );
     }
 
+    let accessibility = "";
+    if (options.accessibility.aria) {
+      accessibility += `
+      [aria-label] {
+        position: absolute !important; /* Outside the DOM flow */
+        height: 1px; width: 1px; /* Nearly collapsed */
+        overflow: hidden;
+        clip: rect(1px 1px 1px 1px); /* IE 7+ only support clip without commas */
+        clip: rect(1px, 1px, 1px, 1px); /* All other browsers */
+      }`;
+    }
+    if (options.accessibility.prefersContrast) {
+      accessibility += `
+      @media (prefers-contrast: more) {
+        .${FunTextBuilder.ROOT_CLASS} {
+          filter: contrast(${1 + options.accessibility.prefersContrast});
+        }
+      }
+
+      @media (prefers-contrast: less) {
+        .${FunTextBuilder.ROOT_CLASS} {
+          filter: contrast(${1 - options.accessibility.prefersContrast});
+        }
+      }
+      `;
+    }
+
+    if (options.accessibility.prefersReducedMotion) {
+      accessibility += `
+      @media (prefers-reduced-motion) {
+        .${FunTextBuilder.ROOT_CLASS} {
+          transform: translate(0, 0) translate3d(0, 0, 0); translateX(0) translateY(0) translateZ(0) rotate(0) rotate3d(0, 0, 0, 0) rotateX(0) rotateY(0) rotateZ(0) !important;
+        }
+      }
+      `;
+    }
+
     const style = document.createElement("style");
     style.innerHTML = `
       ${keyframes.join("\n")}
       ${classes.join("\n")}
 
       .${FunTextBuilder.ROOT_CLASS} {
-        ${options.css.all}
+        ${options.css.global}
         ${options.css.root}
       }
 
       .${FunTextBuilder.CONTAINER_CLASS} {
-        ${options.css.all}
+        ${options.css.global}
         ${options.css.container}
       }
 
       .${FunTextBuilder.TEXT_CLASS} {
-        ${options.css.all}
+        ${options.css.global}
         ${options.css.text}
       }
 
       .${FunTextBuilder.BREAK_CLASS} {
-        ${options.css.all}
+        ${options.css.global}
         ${options.css.break}
       }
+
+      ${options.css.raw}
+
+      ${accessibility}
       `;
 
     return style;
@@ -907,7 +986,7 @@ class FunTextBuilder {
 export class FunText {
   private options: Options;
   private animations: ScopedAnimations;
-  private html: HTMLElement;
+  private html: HTMLElement[];
   private style: HTMLStyleElement;
   private shadowRoot: ShadowRoot;
 
@@ -925,14 +1004,17 @@ export class FunText {
     this.html = FunTextBuilder.buildHtml(this.options, this.animations);
     this.style = FunTextBuilder.buildStyle(this.options, this.animations);
 
-    this.shadowRoot = container.attachShadow({ mode: "closed" });
+    const shadowMode = this.options.javascriptAccess ? "open" : "closed";
+    this.shadowRoot = container.attachShadow({ mode: shadowMode });
   }
 
   // Build text
   mount() {
     this.shadowRoot.innerHTML = "";
 
-    this.shadowRoot.appendChild(this.html);
+    for (const htmlElement of this.html) {
+      this.shadowRoot.appendChild(htmlElement);
+    }
     this.shadowRoot.appendChild(this.style);
   }
 
@@ -958,7 +1040,7 @@ export class FunText {
   }
 
   private getPlayingState(id: string): string {
-    return this.html.style.getPropertyValue(id);
+    return this.html[0].style.getPropertyValue(id);
   }
 
   isPlaying(id: AnimationId): boolean {
@@ -966,7 +1048,7 @@ export class FunText {
     return this.getPlayingState(playStateVariable) === "running";
   }
   isPlayingAny(): boolean {
-    const variables = this.getInlineVariables(this.html);
+    const variables = this.getInlineVariables(this.html[0]);
     for (const variable of variables) {
       if (this.getPlayingState(variable) === "running") {
         return true;
@@ -980,7 +1062,7 @@ export class FunText {
     return this.getPlayingState(playStateVariable) === "paused";
   }
   isPausedAny(): boolean {
-    const variables = this.getInlineVariables(this.html);
+    const variables = this.getInlineVariables(this.html[0]);
     for (const variable of variables) {
       if (this.getPlayingState(variable) === "paused") {
         return true;
@@ -994,14 +1076,14 @@ export class FunText {
     const playStateVariable =
       typeof id === "string" ? id : this.getPlayStateVariable(id);
     const playState = state ? "running" : "paused";
-    this.html.style.setProperty(playStateVariable, playState);
+    this.html[0].style.setProperty(playStateVariable, playState);
   }
 
   toggle(id: AnimationId) {
     this.setPlayState(id, !this.isPlaying(id));
   }
   toggleAll() {
-    const variables = this.getInlineVariables(this.html);
+    const variables = this.getInlineVariables(this.html[0]);
     for (const variable of variables) {
       this.setPlayState(
         variable,
@@ -1014,7 +1096,7 @@ export class FunText {
     this.setPlayState(id, state);
   }
   playAll(state = true) {
-    const variables = this.getInlineVariables(this.html);
+    const variables = this.getInlineVariables(this.html[0]);
     for (const variable of variables) {
       this.setPlayState(variable, state);
     }
@@ -1024,7 +1106,7 @@ export class FunText {
     this.setPlayState(id, false);
   }
   pauseAll() {
-    const variables = this.getInlineVariables(this.html);
+    const variables = this.getInlineVariables(this.html[0]);
     for (const variable of variables) {
       this.setPlayState(variable, false);
     }

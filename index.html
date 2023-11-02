@@ -16,7 +16,7 @@
     <script>
       var exports = {};
     </script>
-    <script src="/lib/index.js"></script>
+    <script src="/lib/index.min.js"></script>
     <script>
       // TEST: "test": "jest --config jestconfig.json",
       /*const container3 = document.getElementById("container3");
@@ -190,7 +190,7 @@
       funtext1.mount();
 
       const container2 = document.getElementById("container2");
-      /*const funtext2 = new FunText(container2, animations);
+      const funtext2 = new FunText(container2, animations);
       funtext2.mount();
 
       const container3 = document.getElementById("container3");
@@ -199,10 +199,10 @@
 
       const container4 = document.getElementById("container4");
       const funtext4 = new FunText(container4, animations);
-      funtext4.mount();*/
+      funtext4.mount();
 
       document.addEventListener("click", () => {
-        funtext1.relocate(container2);
+        //funtext1.relocate(container2);
         //funtext1.pauseAll();
         //funtext1.pause({ scope: 3, property: "color" });
         //funtext2.toggleAll();

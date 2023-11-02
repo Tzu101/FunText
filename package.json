@@ -1,6 +1,6 @@
 {
   "name": "funtext",
-  "version": "1.5.3",
+  "version": "1.5.4",
   "description": "Text animation library.",
   "author": "Val Waldner",
   "license": "MIT",
@@ -27,7 +27,7 @@
     "funtext"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json && esbuild lib/index.js --minify --outfile=lib/index.min.js --target=chrome58,firefox57,safari11,edge16",
+    "build": "tsc -p tsconfig.json && esbuild lib/index.js --minify --outfile=lib/index.min.js",
     "lint": "eslint . --ext .ts",
     "test": "jest --config jestconfig.json"
   },

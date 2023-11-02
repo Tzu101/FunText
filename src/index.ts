@@ -743,7 +743,6 @@ class FunTextBuilder {
 
     // Accessibility aria
     if (options.accessibility.aria) {
-      console.log(options);
       const aria = document.createElement("p");
       aria.setAttribute("aria-label", options.text);
       html.push(aria);
@@ -1007,6 +1006,8 @@ export class FunText {
     this.shadowRoot = this.getShadowRoot(container, this.options);
     if (!this.shadowRoot) {
       console.warn("Could not access container shadow root");
+    } else {
+      this.shadowRoot.appendChild(document.createElement("slot"));
     }
   }
 

@@ -1,17 +1,18 @@
 {
   "name": "funtext",
-  "version": "1.5.4",
+  "version": "1.5.5",
   "description": "Text animation library.",
   "author": "Val Waldner",
   "license": "MIT",
   "main": "lib/index.js",
-  "types": "lib/index.d.js",
+  "types": "lib/index.d.ts",
   "unpkg": "lib/index.min.js",
   "jsdelivr": "lib/index.min.js",
   "files": [
     "lib",
     "index.js",
-    "index.d.ts"
+    "index.d.ts",
+    "types.d.ts"
   ],
   "repository": {
     "type": "git",

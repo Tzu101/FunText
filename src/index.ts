@@ -20,6 +20,7 @@ import type {
   FunTextElement,
   AnimationId,
 } from "./types";
+export type { InputOptions, InputAnimation, AnimationId };
 
 class FunTextCompiler {
   /* 

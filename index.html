@@ -8,6 +8,8 @@
   </head>
   <body>
     <div id="container1">Testing container 1</div>
+    <div id="container2">Testing container 2</div>
+    <div id="container3">Testing container 3</div>
     <!---->
 
     <script src="/lib/index.min.js"></script>
@@ -37,6 +39,38 @@
       ];
       const funtext1 = new FunText(container1, animations1);
       funtext1.mount();
+
+      const container2 = document.getElementById("container2");
+      const animations2 = [
+        {
+          scope: "letter",
+          property: "color",
+          steps: "green",
+          duration: 1,
+          iteration: "infinite",
+          direction: "alternate",
+        },
+      ];
+      const funtext2 = new FunText(container2, animations2);
+      funtext2.mount();
+
+      const container3 = document.getElementById("container3");
+      funtext1.container = container3;
+
+      funtext2.options = {
+        text: "Override!",
+      };
+      funtext2.animations = [
+        animations2[0],
+        {
+          scope: "letter",
+          property: "translate",
+          steps: "0 10px",
+          duration: 1,
+          iteration: "infinite",
+          direction: "alternate",
+        },
+      ];
 
       // TEST: "test": "jest --config jestconfig.json",
       /*const container3 = document.getElementById("container3");

@@ -89,7 +89,8 @@ class FunTextCompiler {
     inputOptions: InputOptions | undefined,
     containerText: string,
   ): Options {
-    const options = FunTextCompiler.DEFAULT_OPTIONS;
+    // Creates deep copy
+    const options = JSON.parse(JSON.stringify(FunTextCompiler.DEFAULT_OPTIONS));
 
     options.text =
       inputOptions?.text ??
@@ -1078,27 +1079,36 @@ export class FunText {
       options.openMode ?? FunTextCompiler.DEFAULT_OPTIONS.openMode;
   }
 
-  private options: Options;
-  private animations: ScopedAnimations;
+  private _container: HTMLElement;
+  private _options: Options;
+  private _animations: ScopedAnimations;
+  private inputAnimations: InputAnimation[];
   private html: HTMLElement[];
   private style: HTMLStyleElement;
   private shadowRoot: ShadowRoot | null;
+  isMounted = false;
 
   constructor(
     container: HTMLElement,
     animations: InputAnimation[],
     options?: InputOptions,
   ) {
-    this.options = FunTextCompiler.compileOptions(options, container.innerText);
-    this.animations = FunTextCompiler.compileAnimations(
+    this.inputAnimations = JSON.parse(JSON.stringify(animations));
+
+    this._container = container;
+    this._options = FunTextCompiler.compileOptions(
+      options,
+      container.innerText,
+    );
+    this._animations = FunTextCompiler.compileAnimations(
       animations,
-      this.options,
+      this._options,
     );
 
-    this.html = FunTextBuilder.buildHtml(this.options, this.animations);
-    this.style = FunTextBuilder.buildStyle(this.options, this.animations);
+    this.html = FunTextBuilder.buildHtml(this._options, this._animations);
+    this.style = FunTextBuilder.buildStyle(this._options, this._animations);
 
-    this.shadowRoot = this.getShadowRoot(container, this.options);
+    this.shadowRoot = this.getShadowRoot(container, this._options);
     if (!this.shadowRoot) {
       console.warn("Could not access container shadow root");
     } else {
@@ -1112,6 +1122,8 @@ export class FunText {
       console.warn("Shadow root not available");
       return;
     }
+
+    this.isMounted = true;
 
     this.shadowRoot.innerHTML = "";
 
@@ -1127,13 +1139,66 @@ export class FunText {
       return;
     }
 
+    this.isMounted = false;
+
     this.shadowRoot.innerHTML = "";
     this.shadowRoot.appendChild(document.createElement("slot"));
   }
 
+  // Change parameters
+  private rebuild() {
+    this.html = FunTextBuilder.buildHtml(this._options, this._animations);
+    this.style = FunTextBuilder.buildStyle(this._options, this._animations);
+
+    if (this.isMounted) {
+      this.unmount();
+      this.mount();
+    }
+  }
+
+  set container(container: HTMLElement) {
+    const newShadow = this.getShadowRoot(container, this._options);
+
+    if (newShadow) {
+      this._container = container;
+
+      const wasMounted = this.isMounted;
+      if (this.isMounted) {
+        this.unmount();
+      }
+
+      this.shadowRoot = newShadow;
+      if (wasMounted) {
+        this.mount();
+      }
+    } else {
+      console.warn("Could not access container shadow root");
+    }
+  }
+
+  set options(options: InputOptions) {
+    this._options = FunTextCompiler.compileOptions(
+      options,
+      this._container.innerText,
+    );
+    this._animations = FunTextCompiler.compileAnimations(
+      this.inputAnimations,
+      this._options,
+    );
+    this.rebuild();
+  }
+
+  set animations(animations: InputAnimation[]) {
+    this._animations = FunTextCompiler.compileAnimations(
+      animations,
+      this._options,
+    );
+    this.rebuild();
+  }
+
   // Change container
   relocate(container: HTMLElement) {
-    const newShadow = this.getShadowRoot(container, this.options);
+    const newShadow = this.getShadowRoot(container, this._options);
 
     if (newShadow) {
       this.unmount();

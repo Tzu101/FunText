@@ -13,12 +13,14 @@
     <script src="/lib/index.min.js"></script>
     <script>
       FunText.options = {
-        text: "some testing",
-        css: {
-          text: "color: blue;",
+        accessibility: {
+          prefersColorScheme: true,
         },
-        nodes: {
-          text: "strong",
+        css: {
+          text: "color: black; background: white;",
+        },
+        altcss: {
+          text: "color: white; background: black;",
         },
       };
 

@@ -24,6 +24,7 @@ interface Accessibility {
   aria?: boolean;
   prefersContrast?: number;
   prefersReducedMotion?: boolean;
+  prefersColorScheme?: boolean;
 }
 
 export interface InputOptions {
@@ -31,6 +32,7 @@ export interface InputOptions {
   defaults?: DefaultProperties;
   nodes?: NodeTags;
   css?: CSSClasses;
+  altcss?: CSSClasses;
   attributes?: { [key: string]: string };
   accessibility?: Accessibility;
   openMode?: boolean;
@@ -38,10 +40,11 @@ export interface InputOptions {
 
 // Options
 export interface Options {
-  text: string;
+  text: string | undefined;
   defaults: Required<DefaultProperties>;
   nodes: Required<NodeTags>;
   css: Required<CSSClasses>;
+  altcss: Required<CSSClasses>;
   attributes: { [key: string]: string };
   accessibility: Required<Accessibility>;
   openMode: boolean;

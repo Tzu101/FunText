@@ -28,7 +28,7 @@ class FunTextCompiler {
 
   // CONSTANTS
   static DEFAULT_OPTIONS: Options = {
-    text: "",
+    text: undefined,
     defaults: {
       delay: 0,
       iteration: "1",
@@ -61,11 +61,25 @@ class FunTextCompiler {
       break: "",
       raw: "",
     },
+    altcss: {
+      global: `
+        display: inline-block;
+        margin: 0;
+        padding: 0;
+        white-space: pre-wrap;
+      `,
+      root: "",
+      container: "",
+      text: "",
+      break: "",
+      raw: "",
+    },
     attributes: {},
     accessibility: {
       aria: true,
       prefersContrast: 0.15,
       prefersReducedMotion: false,
+      prefersColorScheme: false,
     },
     openMode: false,
   };
@@ -102,6 +116,12 @@ class FunTextCompiler {
       options.css = {
         ...FunTextCompiler.DEFAULT_OPTIONS.css,
         ...inputOptions.css,
+      };
+    }
+    if (inputOptions.altcss) {
+      options.altcss = {
+        ...FunTextCompiler.DEFAULT_OPTIONS.altcss,
+        ...inputOptions.altcss,
       };
     }
     if (inputOptions.attributes) {
@@ -679,7 +699,7 @@ class FunTextBuilder {
     const root: FunTextElement = {
       tag: options.nodes.text,
       classes: [FunTextBuilder.ROOT_CLASS, FunTextBuilder.CONTAINER_CLASS],
-      children: options.text,
+      children: options.text ?? "",
       variables: [],
     };
 
@@ -744,7 +764,7 @@ class FunTextBuilder {
     // Accessibility aria
     if (options.accessibility.aria) {
       const aria = document.createElement("p");
-      aria.setAttribute("aria-label", options.text);
+      aria.setAttribute("aria-label", options.text ?? "");
       html.push(aria);
 
       rootElement.setAttribute("aria-hidden", "true");
@@ -948,6 +968,35 @@ class FunTextBuilder {
       `;
     }
 
+    let darkModeCss = "";
+    if (options.accessibility.prefersColorScheme) {
+      darkModeCss = `
+      @media (prefers-color-scheme: dark) {
+        .${FunTextBuilder.ROOT_CLASS} {
+          ${options.altcss.global}
+          ${options.altcss.root}
+        }
+  
+        .${FunTextBuilder.CONTAINER_CLASS} {
+          ${options.altcss.global}
+          ${options.altcss.container}
+        }
+  
+        .${FunTextBuilder.TEXT_CLASS} {
+          ${options.altcss.global}
+          ${options.altcss.text}
+        }
+  
+        .${FunTextBuilder.BREAK_CLASS} {
+          ${options.altcss.global}
+          ${options.altcss.break}
+        }
+  
+        ${options.altcss.raw}
+      }
+      `;
+    }
+
     const style = document.createElement("style");
     style.innerHTML = `
       ${keyframes.join("\n")}
@@ -975,6 +1024,8 @@ class FunTextBuilder {
 
       ${options.css.raw}
 
+      ${darkModeCss}
+
       ${accessibility}
       `;
 
@@ -985,13 +1036,8 @@ class FunTextBuilder {
 export class FunText {
   // Default options
   static set options(options: InputOptions) {
-    console.log(options.text);
-    console.log(FunTextCompiler.DEFAULT_OPTIONS.text);
-
     FunTextCompiler.DEFAULT_OPTIONS.text =
       options.text ?? FunTextCompiler.DEFAULT_OPTIONS.text;
-
-    console.log(FunTextCompiler.DEFAULT_OPTIONS.text);
 
     FunTextCompiler.DEFAULT_OPTIONS.defaults = {
       ...FunTextCompiler.DEFAULT_OPTIONS.defaults,
@@ -1011,6 +1057,11 @@ export class FunText {
     FunTextCompiler.DEFAULT_OPTIONS.css = {
       ...FunTextCompiler.DEFAULT_OPTIONS.css,
       ...options.css,
+    };
+
+    FunTextCompiler.DEFAULT_OPTIONS.altcss = {
+      ...FunTextCompiler.DEFAULT_OPTIONS.altcss,
+      ...options.altcss,
     };
 
     FunTextCompiler.DEFAULT_OPTIONS.attributes = {

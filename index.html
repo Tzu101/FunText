@@ -8,16 +8,34 @@
   </head>
   <body>
     <div id="container1">Testing container 1</div>
-    <div id="container2">Testing container 2</div>
-    <div id="container3">Testing container 3</div>
-    <div id="container4">Testing container 4</div>
     <!---->
 
-    <script>
-      var exports = {};
-    </script>
     <script src="/lib/index.min.js"></script>
     <script>
+      FunText.options = {
+        text: "some testing",
+        css: {
+          text: "color: blue;",
+        },
+        nodes: {
+          text: "strong",
+        },
+      };
+
+      const container1 = document.getElementById("container1");
+      const animations1 = [
+        {
+          scope: "letter",
+          property: "color",
+          steps: "red",
+          duration: 1,
+          iteration: "infinite",
+          direction: "alternate",
+        },
+      ];
+      const funtext1 = new FunText(container1, animations1);
+      funtext1.mount();
+
       // TEST: "test": "jest --config jestconfig.json",
       /*const container3 = document.getElementById("container3");
       const funtext3 = new FunText(container3, [
@@ -144,7 +162,7 @@
       );
       funtext2.mount();*/
 
-      const animations = [
+      /*const animations = [
         {
           scope: "letter",
           property: "color",
@@ -211,7 +229,7 @@
         //funtext3.resetAll();
         //funtext4.play({ scope: 3, property: "color" });
         //funtext4.toggleAll();
-      });
+      });*/
     </script>
   </body>
 </html>

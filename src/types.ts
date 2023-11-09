@@ -33,7 +33,7 @@ export interface InputOptions {
   css?: CSSClasses;
   attributes?: { [key: string]: string };
   accessibility?: Accessibility;
-  javascriptAccess?: boolean;
+  openMode?: boolean;
 }
 
 // Options
@@ -44,7 +44,7 @@ export interface Options {
   css: Required<CSSClasses>;
   attributes: { [key: string]: string };
   accessibility: Required<Accessibility>;
-  javascriptAccess: boolean;
+  openMode: boolean;
 }
 
 /*

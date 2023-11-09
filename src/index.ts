@@ -20,7 +20,6 @@ import type {
   FunTextElement,
   AnimationId,
 } from "./types";
-export type { InputOptions, InputAnimation, AnimationId };
 
 class FunTextCompiler {
   /* 
@@ -28,7 +27,7 @@ class FunTextCompiler {
   */
 
   // CONSTANTS
-  private static readonly DEFAULT_OPTIONS: Options = {
+  static DEFAULT_OPTIONS: Options = {
     text: "",
     defaults: {
       delay: 0,
@@ -68,7 +67,7 @@ class FunTextCompiler {
       prefersContrast: 0.15,
       prefersReducedMotion: false,
     },
-    javascriptAccess: false,
+    openMode: false,
   };
 
   // MAIN
@@ -80,8 +79,8 @@ class FunTextCompiler {
 
     options.text =
       inputOptions?.text ??
-      containerText ??
-      FunTextCompiler.DEFAULT_OPTIONS.text;
+      FunTextCompiler.DEFAULT_OPTIONS.text ??
+      containerText;
 
     if (!inputOptions) {
       return options;
@@ -117,8 +116,8 @@ class FunTextCompiler {
         ...inputOptions.accessibility,
       };
     }
-    if (inputOptions.javascriptAccess) {
-      options.javascriptAccess = inputOptions.javascriptAccess;
+    if (inputOptions.openMode) {
+      options.openMode = inputOptions.openMode;
     }
 
     return options;
@@ -984,6 +983,50 @@ class FunTextBuilder {
 }
 
 export class FunText {
+  // Default options
+  static set options(options: InputOptions) {
+    console.log(options.text);
+    console.log(FunTextCompiler.DEFAULT_OPTIONS.text);
+
+    FunTextCompiler.DEFAULT_OPTIONS.text =
+      options.text ?? FunTextCompiler.DEFAULT_OPTIONS.text;
+
+    console.log(FunTextCompiler.DEFAULT_OPTIONS.text);
+
+    FunTextCompiler.DEFAULT_OPTIONS.defaults = {
+      ...FunTextCompiler.DEFAULT_OPTIONS.defaults,
+      ...options.defaults,
+    };
+
+    FunTextCompiler.DEFAULT_OPTIONS.defaults.sync = {
+      ...FunTextCompiler.DEFAULT_OPTIONS.defaults.sync,
+      ...options.defaults?.sync,
+    };
+
+    FunTextCompiler.DEFAULT_OPTIONS.nodes = {
+      ...FunTextCompiler.DEFAULT_OPTIONS.nodes,
+      ...options.nodes,
+    };
+
+    FunTextCompiler.DEFAULT_OPTIONS.css = {
+      ...FunTextCompiler.DEFAULT_OPTIONS.css,
+      ...options.css,
+    };
+
+    FunTextCompiler.DEFAULT_OPTIONS.attributes = {
+      ...FunTextCompiler.DEFAULT_OPTIONS.attributes,
+      ...options.attributes,
+    };
+
+    FunTextCompiler.DEFAULT_OPTIONS.accessibility = {
+      ...FunTextCompiler.DEFAULT_OPTIONS.accessibility,
+      ...options.accessibility,
+    };
+
+    FunTextCompiler.DEFAULT_OPTIONS.openMode =
+      options.openMode ?? FunTextCompiler.DEFAULT_OPTIONS.openMode;
+  }
+
   private options: Options;
   private animations: ScopedAnimations;
   private html: HTMLElement[];
@@ -1056,7 +1099,7 @@ export class FunText {
     options: Options,
   ): ShadowRoot | null {
     try {
-      const shadowMode = options.javascriptAccess ? "open" : "closed";
+      const shadowMode = options.openMode ? "open" : "closed";
       const shadowRoot = container.attachShadow({ mode: shadowMode });
 
       return shadowRoot;
@@ -1213,3 +1256,8 @@ export class FunText {
     }
   }
 }
+
+// Additional library exports
+export type { InputOptions, InputAnimation, AnimationId };
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(window as any).FunText = FunText;

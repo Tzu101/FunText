@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
-    "target": "ES2015",
-    "module": "CommonJS",
+    "target": "ES6",
+    "module": "ES6",
     "outDir": "lib",
     "rootDir": "src",
     "strict": true,
@@ -9,9 +9,8 @@
     "strictNullChecks": true,
     "declaration": true /* Generates corresponding '.d.ts' file. */,
     "sourceMap": true,
-    "esModuleInterop": true /* Enables emit interoperability between CommonJS and ES Modules via creation of namespace objects for all imports. Implies 'allowSyntheticDefaultImports'. */,
-    "forceConsistentCasingInFileNames": true /* Disallow inconsistently-cased references to the same file. */
+    "moduleResolution": "Node" /* For external @types/* packages */
   },
-  "include": ["src/index.ts"],
-  "exclude": ["node_modules", "**/__tests__/*", "src/types.ts"]
+  "include": ["src/index.ts", "src/types.ts"],
+  "exclude": ["src/__tests__/*"]
 }

@@ -579,61 +579,45 @@ class FunTextBuilder {
 
     if (typeof element.children === "string") {
       const snipets = element.children.split(regex);
-      if (snipets.length > 1) {
-        element.children = [];
-        element.tag = options.nodes.container;
-        element.classes = element.classes.filter(
-          (cls) => cls !== FunTextBuilder.TEXT_CLASS,
-        );
-        element.classes.push(FunTextBuilder.CONTAINER_CLASS);
+      element.children = [];
+      element.tag = options.nodes.container;
+      element.classes = element.classes.filter(
+        (cls) => cls !== FunTextBuilder.TEXT_CLASS,
+      );
+      element.classes.push(FunTextBuilder.CONTAINER_CLASS);
 
-        for (const snipet of snipets) {
-          if (!snipet) {
-            continue;
-          }
-
-          // Set css classes
-          const newElement: FunTextElement = {
-            tag: options.nodes.text,
-            classes: [FunTextBuilder.getScopeClass(priority)],
-            children: snipet,
-            variables: [],
-          };
-
-          if (snipet === "\n") {
-            newElement.tag = options.nodes.break;
-            newElement.children = "";
-            newElement.classes.push(FunTextBuilder.BREAK_CLASS);
-          } else {
-            newElement.classes.push(FunTextBuilder.TEXT_CLASS);
-          }
-
-          // Set css variable
-          for (const animation of animations) {
-            const offsetName = FunTextBuilder.getOffsetVariable(
-              animation.scope.priority,
-              animation.property,
-            );
-            const offsetValue = `${animation.offset(index, Number(priority))}s`;
-            newElement.variables.push([offsetName, offsetValue]);
-          }
-
-          element.children.push(newElement);
-          index += 1;
+      for (const snipet of snipets) {
+        if (!snipet) {
+          continue;
         }
-      } else {
-        element.classes.push(FunTextBuilder.getScopeClass(priority));
 
-        element.variables = [];
+        // Set css classes
+        const newElement: FunTextElement = {
+          tag: options.nodes.text,
+          classes: [FunTextBuilder.getScopeClass(priority)],
+          children: snipet,
+          variables: [],
+        };
+
+        if (snipet === "\n") {
+          newElement.tag = options.nodes.break;
+          newElement.children = "";
+          newElement.classes.push(FunTextBuilder.BREAK_CLASS);
+        } else {
+          newElement.classes.push(FunTextBuilder.TEXT_CLASS);
+        }
+
+        // Set css variable
         for (const animation of animations) {
           const offsetName = FunTextBuilder.getOffsetVariable(
             animation.scope.priority,
             animation.property,
           );
           const offsetValue = `${animation.offset(index, Number(priority))}s`;
-          element.variables.push([offsetName, offsetValue]);
+          newElement.variables.push([offsetName, offsetValue]);
         }
 
+        element.children.push(newElement);
         index += 1;
       }
     } else {
@@ -655,11 +639,14 @@ class FunTextBuilder {
   private static buildElement(element: FunTextElement): HTMLElement {
     const htmlElement = document.createElement(element.tag);
 
+    console.log(element.tag, element.children.length);
+
     for (const cls of element.classes) {
       htmlElement.classList.add(cls);
     }
 
     for (const variable of element.variables) {
+      console.log(variable[0], variable[1]);
       htmlElement.style.setProperty(variable[0], variable[1]);
     }
 

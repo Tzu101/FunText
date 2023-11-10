@@ -639,14 +639,11 @@ class FunTextBuilder {
   private static buildElement(element: FunTextElement): HTMLElement {
     const htmlElement = document.createElement(element.tag);
 
-    console.log(element.tag, element.children.length);
-
     for (const cls of element.classes) {
       htmlElement.classList.add(cls);
     }
 
     for (const variable of element.variables) {
-      console.log(variable[0], variable[1]);
       htmlElement.style.setProperty(variable[0], variable[1]);
     }
 

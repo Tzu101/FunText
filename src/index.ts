@@ -1115,6 +1115,8 @@ export class FunText {
       this.shadowRoot.appendChild(htmlElement);
     }
     this.shadowRoot.appendChild(this.style);
+
+    return this;
   }
 
   unmount() {
@@ -1127,10 +1129,12 @@ export class FunText {
 
     this.shadowRoot.innerHTML = "";
     this.shadowRoot.appendChild(document.createElement("slot"));
+
+    return this;
   }
 
   // Change parameters
-  private rebuild() {
+  rebuild() {
     this.html = FunTextBuilder.buildHtml(this._options, this._animations);
     this.style = FunTextBuilder.buildStyle(this._options, this._animations);
 
@@ -1138,9 +1142,11 @@ export class FunText {
       this.unmount();
       this.mount();
     }
+
+    return this;
   }
 
-  set container(container: HTMLElement) {
+  setContainer(container: HTMLElement) {
     const newShadow = this.getShadowRoot(container, this._options);
 
     if (newShadow) {
@@ -1158,9 +1164,15 @@ export class FunText {
     } else {
       console.warn("Could not access container shadow root");
     }
+
+    return this;
   }
 
-  set options(options: InputOptions) {
+  set container(container: HTMLElement) {
+    this.setContainer(container);
+  }
+
+  setOptions(options: InputOptions) {
     this._options = FunTextCompiler.compileOptions(
       options,
       this._container.innerText,
@@ -1170,27 +1182,26 @@ export class FunText {
       this._options,
     );
     this.rebuild();
+
+    return this;
   }
 
-  set animations(animations: InputAnimation[]) {
+  set options(options: InputOptions) {
+    this.setOptions(options);
+  }
+
+  setAnimations(animations: InputAnimation[]) {
     this._animations = FunTextCompiler.compileAnimations(
       animations,
       this._options,
     );
     this.rebuild();
+
+    return this;
   }
 
-  // Change container
-  relocate(container: HTMLElement) {
-    const newShadow = this.getShadowRoot(container, this._options);
-
-    if (newShadow) {
-      this.unmount();
-      this.shadowRoot = newShadow;
-      this.mount();
-    } else {
-      console.warn("Could not access container shadow root");
-    }
+  set animations(animations: InputAnimation[]) {
+    this.setAnimations(animations);
   }
 
   // Get info
@@ -1265,6 +1276,8 @@ export class FunText {
 
   toggle(id: AnimationId) {
     this.setPlayState(id, !this.isPlaying(id));
+
+    return this;
   }
   toggleAll() {
     const variables = this.getInlineVariables(this.html[0]);
@@ -1274,26 +1287,36 @@ export class FunText {
         !(this.getPlayingState(variable) === "running"),
       );
     }
+
+    return this;
   }
 
   play(id: AnimationId, state = true) {
     this.setPlayState(id, state);
+
+    return this;
   }
   playAll(state = true) {
     const variables = this.getInlineVariables(this.html[0]);
     for (const variable of variables) {
       this.setPlayState(variable, state);
     }
+
+    return this;
   }
 
   pause(id: AnimationId) {
     this.setPlayState(id, false);
+
+    return this;
   }
   pauseAll() {
     const variables = this.getInlineVariables(this.html[0]);
     for (const variable of variables) {
       this.setPlayState(variable, false);
     }
+
+    return this;
   }
 
   // Reset animation/s
@@ -1322,6 +1345,8 @@ export class FunText {
         }
       }
     }
+
+    return this;
   }
 
   resetAll() {
@@ -1354,6 +1379,8 @@ export class FunText {
     for (const deletedRule of deletedRules) {
       sheet.insertRule(deletedRule.cssText);
     }
+
+    return this;
   }
 }
 

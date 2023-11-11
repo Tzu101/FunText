@@ -9,6 +9,7 @@ import type {
   FilterAnimation,
   FilterAnimations,
   InputAnimationSync,
+  AnimationCallback,
   InputAnimation,
   FinalScope,
   AnimationSteps,
@@ -350,6 +351,12 @@ class FunTextCompiler {
       state: animation.state ?? options.defaults.state,
 
       offset,
+
+      onStart: animation.onStart,
+      onEnd: animation.onEnd,
+      onIterationStart: animation.onIterationStart,
+      onIterationEnd: animation.onIterationEnd,
+      onCancel: animation.onCancel,
     };
   }
 
@@ -480,6 +487,12 @@ class FunTextCompiler {
         state: animations.state,
 
         offset: animations.offset,
+
+        onStart: animations.onStart,
+        onEnd: animations.onEnd,
+        onIterationStart: animations.onIterationStart,
+        onIterationEnd: animations.onIterationEnd,
+        onCancel: animations.onCancel,
       },
       options,
     );
@@ -535,6 +548,12 @@ class FunTextCompiler {
   }
 }
 
+type RecursiveData = {
+  first: FunTextElement | null;
+  last: FunTextElement | null;
+  depth: number;
+  maxDepth: number;
+};
 class FunTextBuilder {
   /* 
 		HTML
@@ -572,7 +591,17 @@ class FunTextBuilder {
     priority: string,
     index: number,
     options: Options,
+    data: RecursiveData,
   ): number {
+    if (data.depth > data.maxDepth) {
+      data.maxDepth = data.depth;
+      data.first = element;
+      data.last = element;
+    } else if (data.depth === data.maxDepth) {
+      data.maxDepth = data.depth;
+      data.last = element;
+    }
+
     if (element.tag === options.nodes.break) {
       return index + 1;
     }
@@ -621,6 +650,8 @@ class FunTextBuilder {
         index += 1;
       }
     } else {
+      data.depth += 1;
+
       for (const child of element.children) {
         index = FunTextBuilder.createElement(
           child,
@@ -629,11 +660,23 @@ class FunTextBuilder {
           priority,
           index,
           options,
+          data,
         );
       }
+
+      data.depth -= 1;
     }
 
     return index;
+  }
+
+  private static BuildAnimationCallback(
+    callback: AnimationCallback,
+  ): AnimationCallback {
+    return (event: AnimationEvent) => {
+      event.stopPropagation();
+      callback(event);
+    };
   }
 
   private static buildElement(element: FunTextElement): HTMLElement {
@@ -652,6 +695,39 @@ class FunTextBuilder {
     } else {
       for (const child of element.children) {
         htmlElement.appendChild(FunTextBuilder.buildElement(child));
+      }
+    }
+
+    if (element.onStart) {
+      for (const onFunction of element.onStart) {
+        htmlElement.addEventListener(
+          "animationstart",
+          FunTextBuilder.BuildAnimationCallback(onFunction),
+        );
+      }
+    }
+    if (element.onEnd) {
+      for (const onFunction of element.onEnd) {
+        htmlElement.addEventListener(
+          "animationend",
+          FunTextBuilder.BuildAnimationCallback(onFunction),
+        );
+      }
+    }
+    if (element.onIteration) {
+      for (const onFunction of element.onIteration) {
+        htmlElement.addEventListener(
+          "animationiteration",
+          FunTextBuilder.BuildAnimationCallback(onFunction),
+        );
+      }
+    }
+    if (element.onCancel) {
+      for (const onFunction of element.onCancel) {
+        htmlElement.addEventListener(
+          "animationcancel",
+          FunTextBuilder.BuildAnimationCallback(onFunction),
+        );
       }
     }
 
@@ -732,6 +808,12 @@ class FunTextBuilder {
       // Animations of the current scope
       const scopeAnimations = animations[scopePriority];
 
+      const data: RecursiveData = {
+        first: null,
+        last: null,
+        depth: 0,
+        maxDepth: -1,
+      };
       FunTextBuilder.createElement(
         root,
         splitRegex,
@@ -739,7 +821,63 @@ class FunTextBuilder {
         scopePriority,
         0,
         options,
+        data,
       );
+
+      if (
+        data.last &&
+        typeof data.last.children !== "string" &&
+        data.last.children.length > 0
+      ) {
+        const lastElement = data.last.children[data.last.children.length - 1];
+
+        for (const animation of scopeAnimations) {
+          if (animation.onEnd) {
+            if (!lastElement.onEnd) {
+              lastElement.onEnd = [];
+            }
+            lastElement.onEnd.push(animation.onEnd);
+          }
+
+          if (animation.onIterationEnd) {
+            if (!lastElement.onIteration) {
+              lastElement.onIteration = [];
+            }
+            lastElement.onIteration.push(animation.onIterationEnd);
+          }
+        }
+      }
+
+      if (
+        data.first &&
+        typeof data.first.children !== "string" &&
+        data.first.children.length > 0
+      ) {
+        const firstElement = data.first.children[0];
+
+        for (const animation of scopeAnimations) {
+          if (animation.onStart) {
+            if (!firstElement.onStart) {
+              firstElement.onStart = [];
+            }
+            firstElement.onStart.push(animation.onStart);
+          }
+
+          if (animation.onIterationStart) {
+            if (!firstElement.onIteration) {
+              firstElement.onIteration = [];
+            }
+            firstElement.onIteration.push(animation.onIterationStart);
+          }
+
+          if (animation.onCancel) {
+            if (!firstElement.onCancel) {
+              firstElement.onCancel = [];
+            }
+            firstElement.onCancel.push(animation.onCancel);
+          }
+        }
+      }
     }
 
     const html: HTMLElement[] = [];

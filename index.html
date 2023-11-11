@@ -17,39 +17,56 @@
     <script>
       const animations = [
         {
-          scope: {
-            split: "A",
-            priority: 0,
-          },
+          scope: "word",
           property: "translate",
-          duration: 1,
+          duration: 5,
           steps: "0 10px",
           iteration: "infinite",
           direction: "alternate",
-          offset: 0.3,
-        },
-        {
-          scope: {
-            split: "B",
-            priority: 4,
+          offset: 0.5,
+          onStart: (event) => {
+            console.log("Word start");
           },
-          property: "background",
-          duration: 1,
-          steps: "red",
+          onEnd: (event) => {
+            console.log("Word end");
+          },
+          onIterationStart: (event) => {
+            console.log("Word iteration start", event.elapsedTime);
+          },
+          onIterationEnd: (event) => {
+            console.log("Word iteration end", event.elapsedTime);
+          },
+          onCancel: (event) => {
+            console.log("Word cancel");
+          },
+        },
+        /*{
+          scope: "letter",
+          property: "color",
+          duration: 2.5,
+          steps: "lime",
           iteration: "infinite",
           direction: "alternate",
-          offset: 0.2,
-        },
+          offset: 0.1,
+        },*/
       ];
 
       const container1 = document.getElementById("container1");
       const funtext1 = new FunText(container1, animations, {
-        text: "oooBoooAoooBooo",
+        text: "Hello world, what a wonderfull day!",
       });
-      funtext1.mount().pauseAll();
+      funtext1.mount();
 
+      let click = 0;
       document.addEventListener("click", () => {
-        funtext1.setOptions({ text: "cccBcccAcccBccc" }).playAll();
+        if (funtext1.isPlayingAny()) funtext1.pauseAll();
+        else funtext1.playAll();
+
+        click++;
+        if (click === 5) {
+          click = 0;
+          funtext1.resetAll();
+        }
       });
 
       /*const container2 = document.getElementById("container2");

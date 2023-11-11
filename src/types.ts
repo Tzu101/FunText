@@ -3,7 +3,15 @@
 */
 
 // Input option
-type DefaultProperties = Omit<AnimationProperties, "scope">;
+type DefaultProperties = Omit<
+  AnimationProperties,
+  | "scope"
+  | "onStart"
+  | "onEnd"
+  | "onIterationStart"
+  | "onIterationEnd"
+  | "onCancel"
+>;
 
 interface NodeTags {
   container?: string;
@@ -55,11 +63,6 @@ export interface Options {
 */
 
 // Input animation
-export interface InputAnimationSync {
-  duration: number;
-  location: number | "start" | "middle" | "end";
-}
-
 type worlet = "word" | "letter";
 export type InputScope =
   | worlet
@@ -67,6 +70,13 @@ export type InputScope =
       split: string | RegExp;
       priority: number;
     };
+
+export interface InputAnimationSync {
+  duration: number;
+  location: number | "start" | "middle" | "end";
+}
+
+export type AnimationCallback = (event: AnimationEvent) => void;
 
 interface AnimationProperties {
   scope: InputScope;
@@ -87,6 +97,12 @@ interface AnimationProperties {
 
   offset?: number | AnimationOffset;
   sync?: InputAnimationSync;
+
+  onStart?: AnimationCallback;
+  onEnd?: AnimationCallback;
+  onIterationStart?: AnimationCallback;
+  onIterationEnd?: AnimationCallback;
+  onCancel?: AnimationCallback;
 }
 
 type strnum = string | number;
@@ -156,7 +172,7 @@ export interface AnimationSteps {
   [key: number]: strnum | null;
 }
 
-export type AnimationOffset = (priority: number, index: number) => number;
+export type AnimationOffset = (index: number, priority: number) => number;
 
 export interface Animation {
   scope: FinalScope;
@@ -172,6 +188,12 @@ export interface Animation {
   state: string;
 
   offset: AnimationOffset;
+
+  onStart?: AnimationCallback;
+  onEnd?: AnimationCallback;
+  onIterationStart?: AnimationCallback;
+  onIterationEnd?: AnimationCallback;
+  onCancel?: AnimationCallback;
 }
 
 export type ScopedAnimations = { [key: string]: Animation[] };
@@ -198,6 +220,11 @@ export interface FunTextElement {
   classes: string[];
   children: string | FunTextElement[];
   variables: [string, string][];
+
+  onStart?: AnimationCallback[];
+  onEnd?: AnimationCallback[];
+  onIteration?: AnimationCallback[];
+  onCancel?: AnimationCallback[];
 }
 
 // FunText

@@ -82,7 +82,7 @@ interface AnimationProperties {
   scope: InputScope;
 
   delay?: number;
-  iteration?: number | string | "infinite";
+  iteration?: number | `${number}` | "infinite";
   direction?: "normal" | "reverse" | "alternate" | "alternate-reverse";
   timing?:
     | "ease"

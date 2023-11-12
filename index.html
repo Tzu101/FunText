@@ -8,44 +8,68 @@
   </head>
   <body>
     <div id="container1">Testing container 1</div>
+    <div id="container2">Testing container 2</div>
     <!--
-      <div id="container2">Testing container 2</div>
       <div id="container3">Testing container 3</div>
     -->
 
     <script src="/lib/index.min.js"></script>
     <script>
-      const animations = [
+      const animations1 = [
         {
           scope: "letter",
-          property: "color",
-          duration: 2,
-          steps: "red",
-          iteration: "infinite",
-          offset: 0.2,
-          sync: {
-            duration: 4,
-            location: 100,
-          },
+          type: "transform",
+          animations: [
+            {
+              property: "translateY",
+              duration: 5,
+              unit: "px",
+              steps: "-5",
+            },
+            {
+              property: "rotate",
+              duration: 2.5,
+              unit: "deg",
+              steps: 180,
+            },
+          ],
+          fill: "forwards",
         },
+      ];
+
+      const animations2 = [
         {
           scope: "letter",
-          property: "background-color",
-          duration: 4,
-          steps: "blue",
-          iteration: "infinite",
-          offset: 0.2,
+          type: "filter",
+          animations: [
+            {
+              property: "opacity",
+              duration: 5,
+              unit: "",
+              steps: 0,
+            },
+            {
+              property: "blur",
+              duration: 4,
+              unit: "px",
+              steps: 2,
+            },
+          ],
+          fill: "forwards",
         },
       ];
 
       const container1 = document.getElementById("container1");
-      const funtext1 = new FunText(container1, animations, {
-        text: "0123456789",
-      });
+      const funtext1 = new FunText(container1, animations1);
       funtext1.mount();
+
+      const container2 = document.getElementById("container2");
+      const funtext2 = new FunText(container2, animations2);
+      funtext2.mount();
 
       document.addEventListener("click", () => {
         funtext1.resetAll();
+        funtext2.resetAll();
       });
 
       /*const container2 = document.getElementById("container2");

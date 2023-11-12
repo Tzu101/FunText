@@ -388,30 +388,107 @@ class FunTextCompiler {
     }
 
     const allFramesSet = new Set<number>();
+    const animationLimits: [number, number][] = [];
     for (let s = 0; s < compiledSteps.length; s++) {
+      const steps = compiledSteps[s];
       const animation = compiledAnimations[s];
+      const delay = animation.delay ?? 0;
+      const delayPercent = delay / maxLateness;
+      const durationRatio = (animation.duration + delay) / maxLateness;
 
-      const delayFrame = ((animation.delay ?? 0) / maxLateness) * 100;
-      const durationRatio = animation.duration / maxLateness;
-
-      const syncedSteps: AnimationSteps = {};
-      const frames = Object.keys(compiledSteps[s]).map((f) => Number(f));
-      for (const frame of frames) {
-        const syncedFrame = frame * durationRatio + delayFrame;
-        syncedSteps[syncedFrame] = compiledSteps[s][frame];
-        allFramesSet.add(syncedFrame);
+      let defaultValue = 0;
+      if (animation.property === "opacity") {
+        defaultValue = 1;
       }
 
+      const syncedSteps: AnimationSteps = {};
+      let minStep = 100;
+      let maxStep = 0;
+      for (const stepPercent of Object.keys(steps)) {
+        const stepPercentNum = Number(stepPercent);
+        const syncedStepPercent = stepPercentNum * durationRatio + delayPercent;
+        syncedSteps[syncedStepPercent] = steps[stepPercentNum] ?? defaultValue;
+
+        minStep = Math.min(minStep, syncedStepPercent);
+        maxStep = Math.max(maxStep, syncedStepPercent);
+        allFramesSet.add(syncedStepPercent);
+      }
+
+      const animationLimit: [number, number] = [minStep, maxStep];
+
+      // Indicate keyframes before and after sync need default value
+      if (animations.fill === "backwards" || animations.fill === "both") {
+        const newStep = minStep - 0.01;
+        if (newStep > 0) {
+          syncedSteps[newStep] = syncedSteps[minStep];
+          allFramesSet.add(newStep);
+          animationLimit[0] = newStep;
+        }
+      } else {
+        const newStep = minStep - 0.01;
+        if (newStep > 0) {
+          syncedSteps[newStep] = defaultValue;
+          allFramesSet.add(newStep);
+          animationLimit[0] = newStep;
+        }
+      }
+
+      if (animations.fill === "forwards" || animations.fill === "both") {
+        const newStep = maxStep + 0.01;
+        if (newStep < 100) {
+          syncedSteps[newStep] = syncedSteps[maxStep];
+          allFramesSet.add(newStep);
+          animationLimit[1] = newStep;
+        }
+      } else {
+        const newStep = maxStep + 0.01;
+        if (newStep < 100) {
+          syncedSteps[newStep] = defaultValue;
+          allFramesSet.add(newStep);
+          animationLimit[1] = newStep;
+        }
+      }
+
+      // Indicate keyframes at the start and end need default value if they dont exist
+      if (!syncedSteps[0]) {
+        if (animations.fill === "backwards" || animations.fill === "both") {
+          syncedSteps[0] = syncedSteps[minStep];
+          allFramesSet.add(0);
+        } else {
+          syncedSteps[0] = defaultValue;
+          allFramesSet.add(0);
+        }
+      }
+      if (!syncedSteps[100]) {
+        if (animations.fill === "forwards" || animations.fill === "both") {
+          syncedSteps[100] = syncedSteps[maxStep];
+          allFramesSet.add(100);
+        } else {
+          syncedSteps[100] = defaultValue;
+          allFramesSet.add(100);
+        }
+      }
+
+      animationLimits.push(animationLimit);
       compiledSteps[s] = syncedSteps;
     }
 
     const allFramesList = Array.from(allFramesSet);
     for (let s = 0; s < compiledSteps.length; s++) {
       const compiledStep = compiledSteps[s];
+      const animationLimit = animationLimits[s];
       const stepFrames = Object.keys(compiledStep).map((f) => Number(f));
 
       for (const frame of Array.from(allFramesList)) {
-        if (compiledStep[frame]) {
+        if (compiledStep[frame] !== null || compiledStep[frame] !== undefined) {
+          continue;
+        }
+
+        if (frame < animationLimit[0]) {
+          compiledStep[frame] = compiledStep[animationLimit[0]];
+          continue;
+        } else if (frame > animationLimit[1]) {
+          compiledStep[frame] = compiledStep[animationLimit[1]];
           continue;
         }
 

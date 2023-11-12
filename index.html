@@ -9,12 +9,19 @@
   <body>
     <div id="container1">Testing container 1</div>
     <div id="container2">Testing container 2</div>
+    <div id="container3">Testing container 3</div>
     <!--
-      <div id="container3">Testing container 3</div>
     -->
 
     <script src="/lib/index.min.js"></script>
     <script>
+      FunText.options = {
+        css: {
+          container: "color: green;",
+          text: "color: green;",
+        },
+      };
+
       const animations1 = [
         {
           scope: "letter",
@@ -59,17 +66,32 @@
         },
       ];
 
-      const container1 = document.getElementById("container1");
+      const animations3 = [
+        {
+          scope: "letter",
+          property: "color",
+          duration: 10,
+          steps: ["blue", "yellow", "red"],
+          fill: "forwards",
+        },
+      ];
+
+      /*const container1 = document.getElementById("container1");
       const funtext1 = new FunText(container1, animations1);
       funtext1.mount();
 
       const container2 = document.getElementById("container2");
       const funtext2 = new FunText(container2, animations2);
-      funtext2.mount();
+      funtext2.mount();*/
+
+      const container3 = document.getElementById("container3");
+      const funtext3 = new FunText(container3, animations3);
+      funtext3.mount()?.pauseAll();
 
       document.addEventListener("click", () => {
-        funtext1.resetAll();
-        funtext2.resetAll();
+        /*funtext1.resetAll();
+        funtext2.resetAll();*/
+        funtext3.playAll();
       });
 
       /*const container2 = document.getElementById("container2");

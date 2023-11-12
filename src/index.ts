@@ -193,11 +193,13 @@ class FunTextCompiler {
 
       compiledSteps[0] = null;
 
-      const stepInterval = 100 / (steps.length - 1);
+      const stepInterval = 100 / steps.length;
       for (let step = 0; step < steps.length; step++) {
-        const stepPercentage = Math.min(step * stepInterval, 100);
+        console.log(compiledSteps);
+        const stepPercentage = Math.min((step + 1) * stepInterval, 100);
         compiledSteps[stepPercentage] = steps[step];
       }
+      console.log(compiledSteps);
 
       return compiledSteps;
     }

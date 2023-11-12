@@ -180,6 +180,7 @@ class FunTextCompiler {
 
     // Parameter steps is of type string
     if (typeof steps === "string" || typeof steps === "number") {
+      compiledSteps[0] = null;
       compiledSteps[100] = steps;
       return compiledSteps;
     }
@@ -190,8 +191,9 @@ class FunTextCompiler {
         return compiledSteps;
       }
 
-      const stepInterval = 100 / (steps.length - 1);
+      compiledSteps[0] = null;
 
+      const stepInterval = 100 / (steps.length - 1);
       for (let step = 0; step < steps.length; step++) {
         const stepPercentage = Math.min(step * stepInterval, 100);
         compiledSteps[stepPercentage] = steps[step];
@@ -256,12 +258,10 @@ class FunTextCompiler {
     }
 
     // Indicate keyframes before and after sync need default value
-    if (minStep !== maxStep) {
-      if (fill === "backwards" || fill === "both") {
-        syncedSteps[minStep - 0.01] = syncedSteps[minStep];
-      } else {
-        syncedSteps[minStep - 0.01] = null;
-      }
+    if (fill === "backwards" || fill === "both") {
+      syncedSteps[minStep - 0.01] = syncedSteps[minStep];
+    } else {
+      syncedSteps[minStep - 0.01] = null;
     }
 
     if (fill === "forwards" || fill === "both") {

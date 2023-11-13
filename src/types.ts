@@ -19,8 +19,8 @@ interface NodeTags {
   break?: string;
 }
 
-interface CSSClasses {
-  global?: string;
+export interface CssClasses {
+  default?: string;
   root?: string;
   container?: string;
   text?: string;
@@ -28,19 +28,22 @@ interface CSSClasses {
   raw?: string;
 }
 
+type CssOptions<T extends object> = T & {
+  dark?: T;
+  [key: number | `${number}`]: T;
+};
+
 interface Accessibility {
   aria?: boolean;
   prefersContrast?: number;
   prefersReducedMotion?: boolean;
-  prefersColorScheme?: boolean;
 }
 
 export interface InputOptions {
   text?: string;
   defaults?: DefaultProperties;
   nodes?: NodeTags;
-  css?: CSSClasses;
-  altcss?: CSSClasses;
+  css?: CssOptions<CssClasses>;
   attributes?: { [key: string]: string };
   accessibility?: Accessibility;
   openMode?: boolean;
@@ -51,8 +54,7 @@ export interface Options {
   text: string | undefined;
   defaults: Required<DefaultProperties>;
   nodes: Required<NodeTags>;
-  css: Required<CSSClasses>;
-  altcss: Required<CSSClasses>;
+  css: CssOptions<CssClasses>;
   attributes: { [key: string]: string };
   accessibility: Required<Accessibility>;
   openMode: boolean;

@@ -1,3 +1,4 @@
+import { cloneDeep } from "lodash";
 import type {
   Options,
   InputOptions,
@@ -18,6 +19,7 @@ import type {
   ScopedAnimations,
   KeyframeAnimation,
   KeyframeAnimations,
+  CssClasses,
   FunTextElement,
   AnimationId,
 } from "./types";
@@ -50,20 +52,7 @@ class FunTextCompiler {
       break: "br",
     },
     css: {
-      global: `
-        display: inline-block;
-        margin: 0;
-        padding: 0;
-        white-space: pre-wrap;
-      `,
-      root: "",
-      container: "",
-      text: "",
-      break: "",
-      raw: "",
-    },
-    altcss: {
-      global: `
+      default: `
         display: inline-block;
         margin: 0;
         padding: 0;
@@ -80,67 +69,50 @@ class FunTextCompiler {
       aria: true,
       prefersContrast: 0.15,
       prefersReducedMotion: false,
-      prefersColorScheme: false,
     },
     openMode: false,
   };
 
   // MAIN
+  static mergeOptions(input?: InputOptions): Options {
+    // Creates deep copy
+    const defaults = cloneDeep(FunTextCompiler.DEFAULT_OPTIONS);
+
+    if (!input) {
+      return defaults;
+    }
+
+    const copy = cloneDeep(input);
+
+    return {
+      ...defaults,
+      ...copy,
+      defaults: {
+        ...defaults.defaults,
+        ...copy.defaults,
+      },
+      nodes: {
+        ...defaults.nodes,
+        ...copy.nodes,
+      },
+      css: {
+        ...defaults.css,
+        ...copy.css,
+      },
+      accessibility: {
+        ...defaults.accessibility,
+        ...copy.accessibility,
+      },
+    };
+  }
+
   static compileOptions(
     inputOptions: InputOptions | undefined,
     containerText: string,
   ): Options {
-    // Creates deep copy
-    const options = JSON.parse(JSON.stringify(FunTextCompiler.DEFAULT_OPTIONS));
+    const options = FunTextCompiler.mergeOptions(inputOptions);
 
-    options.text =
-      inputOptions?.text ??
-      FunTextCompiler.DEFAULT_OPTIONS.text ??
-      containerText;
-
-    if (!inputOptions) {
-      return options;
-    }
-
-    if (inputOptions.defaults) {
-      options.defaults = {
-        ...FunTextCompiler.DEFAULT_OPTIONS.defaults,
-        ...inputOptions.defaults,
-      };
-    }
-    if (inputOptions.nodes) {
-      options.nodes = {
-        ...FunTextCompiler.DEFAULT_OPTIONS.nodes,
-        ...inputOptions.nodes,
-      };
-    }
-    if (inputOptions.css) {
-      options.css = {
-        ...FunTextCompiler.DEFAULT_OPTIONS.css,
-        ...inputOptions.css,
-      };
-    }
-    if (inputOptions.altcss) {
-      options.altcss = {
-        ...FunTextCompiler.DEFAULT_OPTIONS.altcss,
-        ...inputOptions.altcss,
-      };
-    }
-    if (inputOptions.attributes) {
-      options.attributes = {
-        ...FunTextCompiler.DEFAULT_OPTIONS.attributes,
-        ...inputOptions.attributes,
-      };
-    }
-    if (inputOptions.accessibility) {
-      options.accessibility = {
-        ...FunTextCompiler.DEFAULT_OPTIONS.accessibility,
-        ...inputOptions.accessibility,
-      };
-    }
-    if (inputOptions.openMode) {
-      options.openMode = inputOptions.openMode;
-    }
+    options.text = options.text ?? containerText;
 
     return options;
   }
@@ -195,11 +167,9 @@ class FunTextCompiler {
 
       const stepInterval = 100 / steps.length;
       for (let step = 0; step < steps.length; step++) {
-        console.log(compiledSteps);
         const stepPercentage = Math.min((step + 1) * stepInterval, 100);
         compiledSteps[stepPercentage] = steps[step];
       }
-      console.log(compiledSteps);
 
       return compiledSteps;
     }
@@ -482,7 +452,7 @@ class FunTextCompiler {
       const stepFrames = Object.keys(compiledStep).map((f) => Number(f));
 
       for (const frame of Array.from(allFramesList)) {
-        if (compiledStep[frame] !== null || compiledStep[frame] !== undefined) {
+        if (compiledStep[frame] !== null && compiledStep[frame] !== undefined) {
           continue;
         }
 
@@ -1104,35 +1074,33 @@ class FunTextBuilder {
     `;
   }
 
-  // MAIN
-  static getKeyframesName(priority: number | string, property: string): string {
-    return `${FunTextBuilder.KEYFRAME}-${priority}-${property}`;
+  private static buildClasses(css: CssClasses): string {
+    return `
+      .${FunTextBuilder.ROOT_CLASS} {
+        ${css.default ?? ""}
+        ${css.root ?? ""}
+      }
+
+      .${FunTextBuilder.CONTAINER_CLASS} {
+        ${css.default ?? ""}
+        ${css.container ?? ""}
+      }
+
+      .${FunTextBuilder.TEXT_CLASS} {
+        ${css.default ?? ""}
+        ${css.text ?? ""}
+      }
+
+      .${FunTextBuilder.BREAK_CLASS} {
+        ${css.default ?? ""}
+        ${css.break ?? ""}
+      }
+
+      ${css.raw ?? ""}
+    `;
   }
 
-  static buildStyle(
-    options: Options,
-    animations: ScopedAnimations,
-  ): HTMLStyleElement {
-    const buildAnimations: KeyframeAnimations = {};
-    for (const priority of Object.keys(animations)) {
-      buildAnimations[priority] = [];
-      for (const animation of animations[priority]) {
-        const buildAnimation = FunTextBuilder.buildAnimation(animation);
-        buildAnimations[priority].push(buildAnimation);
-      }
-    }
-
-    const keyframes: string[] = [];
-    const classes: string[] = [];
-    for (const priority of Object.keys(buildAnimations)) {
-      keyframes.push(
-        FunTextBuilder.joinValues("keyframes", buildAnimations[priority], "\n"),
-      );
-      classes.push(
-        FunTextBuilder.buildClass(buildAnimations[priority], priority),
-      );
-    }
-
+  private static buildCss(options: Options): string {
     let accessibility = "";
     if (options.accessibility.aria) {
       accessibility += `
@@ -1159,77 +1127,91 @@ class FunTextBuilder {
       }
       `;
     }
-
     if (options.accessibility.prefersReducedMotion) {
       accessibility += `
       @media (prefers-reduced-motion) {
         .${FunTextBuilder.ROOT_CLASS} {
-          transform: translate(0, 0) translate3d(0, 0, 0); translateX(0) translateY(0) translateZ(0) rotate(0) rotate3d(0, 0, 0, 0) rotateX(0) rotateY(0) rotateZ(0) !important;
+          transform: translate(0, 0) translate3d(0, 0, 0) translateX(0) translateY(0) translateZ(0) rotate(0) rotate3d(0, 0, 0, 0) rotateX(0) rotateY(0) rotateZ(0) !important;
         }
       }
       `;
     }
 
-    let darkModeCss = "";
-    if (options.accessibility.prefersColorScheme) {
-      darkModeCss = `
-      @media (prefers-color-scheme: dark) {
-        .${FunTextBuilder.ROOT_CLASS} {
-          ${options.altcss.global}
-          ${options.altcss.root}
+    const light = `
+      ${FunTextBuilder.buildClasses(options.css)}
+    `;
+
+    let dark = "";
+    if (options.css.dark) {
+      dark = `
+        @media (prefers-color-scheme: dark) {
+          ${FunTextBuilder.buildClasses(options.css.dark)}
         }
-  
-        .${FunTextBuilder.CONTAINER_CLASS} {
-          ${options.altcss.global}
-          ${options.altcss.container}
-        }
-  
-        .${FunTextBuilder.TEXT_CLASS} {
-          ${options.altcss.global}
-          ${options.altcss.text}
-        }
-  
-        .${FunTextBuilder.BREAK_CLASS} {
-          ${options.altcss.global}
-          ${options.altcss.break}
-        }
-  
-        ${options.altcss.raw}
-      }
       `;
     }
 
+    let layout = "";
+    const sizes = Object.keys(options.css).filter((key) => {
+      return !isNaN(parseFloat(key));
+    });
+    for (const size of sizes) {
+      layout += `
+        @media (max-width: ${size}px) {
+          ${
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            //@ts-ignore
+            FunTextBuilder.buildClasses(options.css[size])
+          }
+        }
+      `;
+    }
+
+    const css = `
+      ${light}
+      ${dark}
+      ${layout}
+      ${accessibility}
+    `;
+
+    return css;
+  }
+
+  // MAIN
+  static getKeyframesName(priority: number | string, property: string): string {
+    return `${FunTextBuilder.KEYFRAME}-${priority}-${property}`;
+  }
+
+  static buildStyle(
+    options: Options,
+    animations: ScopedAnimations,
+  ): HTMLStyleElement {
+    const buildAnimations: KeyframeAnimations = {};
+    for (const priority of Object.keys(animations)) {
+      buildAnimations[priority] = [];
+      for (const animation of animations[priority]) {
+        const buildAnimation = FunTextBuilder.buildAnimation(animation);
+        buildAnimations[priority].push(buildAnimation);
+      }
+    }
+
+    const keyframes: string[] = [];
+    const scopes: string[] = [];
+    for (const priority of Object.keys(buildAnimations)) {
+      keyframes.push(
+        FunTextBuilder.joinValues("keyframes", buildAnimations[priority], "\n"),
+      );
+      scopes.push(
+        FunTextBuilder.buildClass(buildAnimations[priority], priority),
+      );
+    }
+
+    const css = FunTextBuilder.buildCss(options);
     const style = document.createElement("style");
     style.innerHTML = `
       ${keyframes.join("\n")}
-      ${classes.join("\n")}
-
-      .${FunTextBuilder.ROOT_CLASS} {
-        ${options.css.global}
-        ${options.css.root}
-      }
-
-      .${FunTextBuilder.CONTAINER_CLASS} {
-        ${options.css.global}
-        ${options.css.container}
-      }
-
-      .${FunTextBuilder.TEXT_CLASS} {
-        ${options.css.global}
-        ${options.css.text}
-      }
-
-      .${FunTextBuilder.BREAK_CLASS} {
-        ${options.css.global}
-        ${options.css.break}
-      }
-
-      ${options.css.raw}
-
-      ${darkModeCss}
-
-      ${accessibility}
-      `;
+      ${scopes.join("\n")}
+      ${css}
+    `;
 
     return style;
   }
@@ -1238,48 +1220,13 @@ class FunTextBuilder {
 export class FunText {
   // Default options
   static set options(options: InputOptions) {
-    FunTextCompiler.DEFAULT_OPTIONS.text =
-      options.text ?? FunTextCompiler.DEFAULT_OPTIONS.text;
-
-    FunTextCompiler.DEFAULT_OPTIONS.defaults = {
-      ...FunTextCompiler.DEFAULT_OPTIONS.defaults,
-      ...options.defaults,
-    };
-
-    FunTextCompiler.DEFAULT_OPTIONS.defaults.sync = {
-      ...FunTextCompiler.DEFAULT_OPTIONS.defaults.sync,
-      ...options.defaults?.sync,
-    };
-
-    FunTextCompiler.DEFAULT_OPTIONS.nodes = {
-      ...FunTextCompiler.DEFAULT_OPTIONS.nodes,
-      ...options.nodes,
-    };
-
-    FunTextCompiler.DEFAULT_OPTIONS.css = {
-      ...FunTextCompiler.DEFAULT_OPTIONS.css,
-      ...options.css,
-    };
-
-    FunTextCompiler.DEFAULT_OPTIONS.altcss = {
-      ...FunTextCompiler.DEFAULT_OPTIONS.altcss,
-      ...options.altcss,
-    };
-
-    FunTextCompiler.DEFAULT_OPTIONS.attributes = {
-      ...FunTextCompiler.DEFAULT_OPTIONS.attributes,
-      ...options.attributes,
-    };
-
-    FunTextCompiler.DEFAULT_OPTIONS.accessibility = {
-      ...FunTextCompiler.DEFAULT_OPTIONS.accessibility,
-      ...options.accessibility,
-    };
-
-    FunTextCompiler.DEFAULT_OPTIONS.openMode =
-      options.openMode ?? FunTextCompiler.DEFAULT_OPTIONS.openMode;
+    FunText.setOptions(options);
+  }
+  static setOptions(options: InputOptions) {
+    FunTextCompiler.DEFAULT_OPTIONS = FunTextCompiler.mergeOptions(options);
   }
 
+  // Instance
   private _container: HTMLElement;
   private _options: Options;
   private _animations: ScopedAnimations;
@@ -1294,7 +1241,8 @@ export class FunText {
     animations: InputAnimation[],
     options?: InputOptions,
   ) {
-    this.inputAnimations = JSON.parse(JSON.stringify(animations));
+    // TODO: Check if this preserves functions
+    this.inputAnimations = cloneDeep(animations);
 
     this._container = container;
     this._options = FunTextCompiler.compileOptions(

@@ -13,12 +13,23 @@
     <!--
     -->
 
+    <style>
+      body {
+        background: black;
+      }
+    </style>
+
     <script src="/lib/index.min.js"></script>
     <script>
       FunText.options = {
         css: {
-          container: "color: green;",
-          text: "color: green;",
+          container: "background: white; color: black; font-size: 2rem;",
+          dark: {
+            container: "background: black; color: white;",
+          },
+          400: {
+            container: "font-size: 1rem;",
+          },
         },
       };
 
@@ -40,7 +51,11 @@
               steps: 180,
             },
           ],
+          iteration: "infinite",
           fill: "forwards",
+          onStart: () => {
+            console.log("Here");
+          },
         },
       ];
 
@@ -50,10 +65,10 @@
           type: "filter",
           animations: [
             {
-              property: "opacity",
+              property: "invert",
               duration: 5,
               unit: "",
-              steps: 0,
+              steps: 1,
             },
             {
               property: "blur",
@@ -62,6 +77,7 @@
               steps: 2,
             },
           ],
+          iteration: "infinite",
           fill: "forwards",
         },
       ];
@@ -72,27 +88,24 @@
           property: "color",
           duration: 10,
           steps: ["blue", "yellow", "red"],
-          fill: "forwards",
+          direction: "alternate",
+          iteration: "infinite",
         },
       ];
 
-      /*const container1 = document.getElementById("container1");
+      const container1 = document.getElementById("container1");
       const funtext1 = new FunText(container1, animations1);
       funtext1.mount();
 
       const container2 = document.getElementById("container2");
       const funtext2 = new FunText(container2, animations2);
-      funtext2.mount();*/
+      funtext2.mount();
 
       const container3 = document.getElementById("container3");
-      const funtext3 = new FunText(container3, animations3);
-      funtext3.mount()?.pauseAll();
-
-      document.addEventListener("click", () => {
-        /*funtext1.resetAll();
-        funtext2.resetAll();*/
-        funtext3.playAll();
+      const funtext3 = new FunText(container3, animations3, {
+        defaults: { offset: (i) => i * i * 0.02 },
       });
+      funtext3.mount();
 
       /*const container2 = document.getElementById("container2");
       const funtext2 = new FunText(

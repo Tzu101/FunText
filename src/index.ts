@@ -1151,9 +1151,11 @@ class FunTextBuilder {
     }
 
     let layout = "";
-    const sizes = Object.keys(options.css).filter((key) => {
-      return !isNaN(parseFloat(key));
-    });
+    const sizes = Object.keys(options.css)
+      .filter((key) => {
+        return !isNaN(parseFloat(key));
+      })
+      .sort((s1, s2) => Number(s2) - Number(s1));
     for (const size of sizes) {
       layout += `
         @media (max-width: ${size}px) {

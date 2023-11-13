@@ -46,7 +46,7 @@ class FunTextCompiler {
         duration: 0,
       },
     },
-    nodes: {
+    tags: {
       container: "div",
       text: "p",
       break: "br",
@@ -91,9 +91,9 @@ class FunTextCompiler {
         ...defaults.defaults,
         ...copy.defaults,
       },
-      nodes: {
-        ...defaults.nodes,
-        ...copy.nodes,
+      tags: {
+        ...defaults.tags,
+        ...copy.tags,
       },
       css: {
         ...defaults.css,
@@ -651,14 +651,14 @@ class FunTextBuilder {
       data.last = element;
     }
 
-    if (element.tag === options.nodes.break) {
+    if (element.tag === options.tags.break) {
       return index + 1;
     }
 
     if (typeof element.children === "string") {
       const snipets = element.children.split(regex);
       element.children = [];
-      element.tag = options.nodes.container;
+      element.tag = options.tags.container;
       element.classes = element.classes.filter(
         (cls) => cls !== FunTextBuilder.TEXT_CLASS,
       );
@@ -671,14 +671,14 @@ class FunTextBuilder {
 
         // Set css classes
         const newElement: FunTextElement = {
-          tag: options.nodes.text,
+          tag: options.tags.text,
           classes: [FunTextBuilder.getScopeClass(priority)],
           children: snipet,
           variables: [],
         };
 
         if (snipet === "\n") {
-          newElement.tag = options.nodes.break;
+          newElement.tag = options.tags.break;
           newElement.children = "";
           newElement.classes.push(FunTextBuilder.BREAK_CLASS);
         } else {
@@ -807,7 +807,7 @@ class FunTextBuilder {
     animations: ScopedAnimations,
   ): HTMLElement[] {
     const root: FunTextElement = {
-      tag: options.nodes.text,
+      tag: options.tags.text,
       classes: [FunTextBuilder.ROOT_CLASS, FunTextBuilder.CONTAINER_CLASS],
       children: options.text ?? "",
       variables: [],

@@ -13,7 +13,7 @@ type DefaultProperties = Omit<
   | "onCancel"
 >;
 
-interface NodeTags {
+interface Tags {
   container?: string;
   text?: string;
   break?: string;
@@ -42,7 +42,7 @@ interface Accessibility {
 export interface InputOptions {
   text?: string;
   defaults?: DefaultProperties;
-  nodes?: NodeTags;
+  tags?: Tags;
   css?: CssOptions<CssClasses>;
   attributes?: { [key: string]: string };
   accessibility?: Accessibility;
@@ -53,7 +53,7 @@ export interface InputOptions {
 export interface Options {
   text: string | undefined;
   defaults: Required<DefaultProperties>;
-  nodes: Required<NodeTags>;
+  tags: Required<Tags>;
   css: CssOptions<CssClasses>;
   attributes: { [key: string]: string };
   accessibility: Required<Accessibility>;

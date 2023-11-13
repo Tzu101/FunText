@@ -7,15 +7,25 @@
     <title>FunText Test</title>
   </head>
   <body>
-    <div id="container1">Testing container 1</div>
-    <div id="container2">Testing container 2</div>
-    <div id="container3">Testing container 3</div>
+    <div class="container">
+      <div>First</div>
+      <div id="funtext">Hello world, What a wonderfull day!</div>
+      <div>Last</div>
+    </div>
     <!--
     -->
 
     <style>
       body {
         background: black;
+      }
+
+      .container {
+        color: white;
+
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
       }
     </style>
 
@@ -33,79 +43,25 @@
         },
       };
 
-      const animations1 = [
+      const animations = [
         {
           scope: "letter",
-          type: "transform",
-          animations: [
-            {
-              property: "translateY",
-              duration: 5,
-              unit: "px",
-              steps: "-5",
-            },
-            {
-              property: "rotate",
-              duration: 2.5,
-              unit: "deg",
-              steps: 180,
-            },
-          ],
+          property: "color",
+          duration: 2,
+          steps: ["lime", "green", "lime"],
           iteration: "infinite",
-          fill: "forwards",
-          onStart: () => {
-            console.log("Here");
+          sync: {
+            location: 0,
+            duration: 4,
           },
         },
       ];
 
-      const animations2 = [
-        {
-          scope: "letter",
-          type: "filter",
-          animations: [
-            {
-              property: "invert",
-              duration: 5,
-              unit: "",
-              steps: 1,
-            },
-            {
-              property: "blur",
-              duration: 4,
-              unit: "px",
-              steps: 2,
-            },
-          ],
-          iteration: "infinite",
-          fill: "forwards",
-        },
-      ];
-
-      const animations3 = [
-        {
-          scope: "letter",
-          property: "color",
-          duration: 10,
-          steps: ["blue", "yellow", "red"],
-          direction: "alternate",
-          iteration: "infinite",
-        },
-      ];
-
-      const container1 = document.getElementById("container1");
-      const funtext1 = new FunText(container1, animations1);
-      funtext1.mount();
-
-      const container2 = document.getElementById("container2");
-      const funtext2 = new FunText(container2, animations2);
-      funtext2.mount();
-
-      const container3 = document.getElementById("container3");
-      const funtext3 = new FunText(container3, animations3, {
-        defaults: { offset: (i) => i * i * 0.02 },
+      const container = document.getElementById("funtext");
+      const funtext = new FunText(container, animations, {
+        defaults: { offset: (i) => i * i * 0.005 },
       });
-      funtext3.mount();
+      funtext.mount();
 
       /*const container2 = document.getElementById("container2");
       const funtext2 = new FunText(

@@ -316,7 +316,9 @@ class FunTextCompiler {
       duration,
 
       delay: animation.delay ?? options.defaults.delay,
-      iteration: `${animation.iteration}` ?? options.defaults.iteration,
+      iteration: animation.iteration
+        ? `${animation.iteration}`
+        : `${options.defaults.iteration}`,
       direction: animation.direction ?? options.defaults.direction,
       timing: animation.timing ?? options.defaults.timing,
       fill: animation.fill ?? options.defaults.fill,

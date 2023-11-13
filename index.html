@@ -39,19 +39,24 @@
           scope: "letter",
           property: "color",
           duration: 2,
-          steps: ["lime", "green", "lime"],
-          iteration: "infinite",
+          steps: ["blue", "red"],
           sync: {
             location: 0,
             duration: 4,
           },
+          offset: (i) => i * i * 0.005,
         },
       ];
 
+      const options = {
+        defaults: {
+          iteration: "infinite",
+          direction: "alternate",
+        },
+      };
+
       const container = document.getElementById("funtext");
-      const funtext = new FunText(container, animations, {
-        defaults: { offset: (i) => i * i * 0.005 },
-      });
+      const funtext = new FunText(container, animations, options);
       funtext.mount();
 
       /*const container2 = document.getElementById("container2");

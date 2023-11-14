@@ -231,6 +231,11 @@ export interface FunTextElement {
 
 // FunText
 export interface AnimationId {
+  scope: number | worlet;
+  property: string;
+}
+
+export interface CompiledAnimationId {
   scope: number;
   property: string;
 }

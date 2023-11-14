@@ -16,19 +16,20 @@
     <script>
       const animations = [
         {
-          scope: {
-            priority: 0,
-            split: "Hello",
-          },
+          scope: "letter",
           property: "color",
           duration: 2,
           steps: "blue",
+          direction: "alternate",
         },
       ];
 
       const options = {
         defaults: {
           iteration: "infinite",
+        },
+        css: {
+          text: "font-size: 3rem;",
         },
       };
 
@@ -37,7 +38,9 @@
       const funtext = new FunText(container1, animations, options);
       funtext.mount();
 
-      funtext.container = container2;
+      document.addEventListener("click", () => {
+        funtext.toggle({ property: "color", scope: "letter" });
+      });
 
       /*const container2 = document.getElementById("container2");
       const funtext2 = new FunText(

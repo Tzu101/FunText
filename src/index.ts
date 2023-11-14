@@ -22,6 +22,7 @@ import type {
   CssClasses,
   FunTextElement,
   AnimationId,
+  CompiledAnimationId,
 } from "./types";
 
 class FunTextCompiler {
@@ -129,7 +130,7 @@ class FunTextCompiler {
   };
 
   private static readonly DEFAULT_PRIORITY = 1;
-  private static readonly SCOPE_PRIORITY = {
+  static readonly SCOPE_PRIORITY = {
     word: FunTextCompiler.DEFAULT_PRIORITY,
     letter: 3,
   };
@@ -1395,6 +1396,18 @@ export class FunText {
     return this._isMounted;
   }
 
+  private compileAnimtionsId(id: AnimationId): CompiledAnimationId {
+    let scope = id.scope;
+    if (scope === "word" || scope === "letter") {
+      scope = FunTextCompiler.SCOPE_PRIORITY[scope];
+    }
+
+    return {
+      scope,
+      property: id.property,
+    };
+  }
+
   private getShadowRoot(
     container: HTMLElement,
     options: Options,
@@ -1420,7 +1433,7 @@ export class FunText {
       );
   }
 
-  private getPlayStateVariable(id: AnimationId): string {
+  private getPlayStateVariable(id: CompiledAnimationId): string {
     return FunTextBuilder.getPlayStateVariable(id.scope, id.property);
   }
 
@@ -1429,7 +1442,8 @@ export class FunText {
   }
 
   isPlaying(id: AnimationId): boolean {
-    const playStateVariable = this.getPlayStateVariable(id);
+    const cid = this.compileAnimtionsId(id);
+    const playStateVariable = this.getPlayStateVariable(cid);
     return this.getPlayingState(playStateVariable) === "running";
   }
   isPlayingAny(): boolean {
@@ -1443,7 +1457,8 @@ export class FunText {
   }
 
   isPaused(id: AnimationId): boolean {
-    const playStateVariable = this.getPlayStateVariable(id);
+    const cid = this.compileAnimtionsId(id);
+    const playStateVariable = this.getPlayStateVariable(cid);
     return this.getPlayingState(playStateVariable) === "paused";
   }
   isPausedAny(): boolean {
@@ -1457,7 +1472,7 @@ export class FunText {
   }
 
   // Toggle animation/s
-  private setPlayState(id: string | AnimationId, state: boolean) {
+  private setPlayState(id: string | CompiledAnimationId, state: boolean) {
     const playStateVariable =
       typeof id === "string" ? id : this.getPlayStateVariable(id);
     const playState = state ? "running" : "paused";
@@ -1465,7 +1480,8 @@ export class FunText {
   }
 
   toggle(id: AnimationId) {
-    this.setPlayState(id, !this.isPlaying(id));
+    const cid = this.compileAnimtionsId(id);
+    this.setPlayState(cid, !this.isPlaying(id));
 
     return this;
   }
@@ -1482,7 +1498,8 @@ export class FunText {
   }
 
   play(id: AnimationId, state = true) {
-    this.setPlayState(id, state);
+    const cid = this.compileAnimtionsId(id);
+    this.setPlayState(cid, state);
 
     return this;
   }
@@ -1496,7 +1513,8 @@ export class FunText {
   }
 
   pause(id: AnimationId) {
-    this.setPlayState(id, false);
+    const cid = this.compileAnimtionsId(id);
+    this.setPlayState(cid, false);
 
     return this;
   }
@@ -1511,7 +1529,8 @@ export class FunText {
 
   // Reset animation/s
   reset(id: AnimationId) {
-    const targetRule = FunTextBuilder.getKeyframesName(id.scope, id.property);
+    const cid = this.compileAnimtionsId(id);
+    const targetRule = FunTextBuilder.getKeyframesName(cid.scope, cid.property);
 
     const sheet = this.style.sheet;
 

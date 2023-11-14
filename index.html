@@ -7,7 +7,7 @@
     <title>FunText Test</title>
   </head>
   <body>
-    <div id="funtext">Hello world, What a wonderfull day!</div>
+    <div id="funtext">Hello</div>
     <!--
     -->
 
@@ -36,22 +36,19 @@
 
       const animations = [
         {
-          scope: "letter",
+          scope: {
+            priority: 0,
+            split: "Hello",
+          },
           property: "color",
           duration: 2,
-          steps: ["blue", "red"],
-          sync: {
-            location: 0,
-            duration: 4,
-          },
-          offset: (i) => i * i * 0.005,
+          steps: "blue",
         },
       ];
 
       const options = {
         defaults: {
           iteration: "infinite",
-          direction: "alternate",
         },
       };
 

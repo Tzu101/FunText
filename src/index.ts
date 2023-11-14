@@ -1455,6 +1455,9 @@ export class FunText {
     }
     return false;
   }
+  isPlayingAll(): boolean {
+    return !this.isPausedAny();
+  }
 
   isPaused(id: AnimationId): boolean {
     const cid = this.compileAnimtionsId(id);
@@ -1469,6 +1472,9 @@ export class FunText {
       }
     }
     return false;
+  }
+  isPausedAll(): boolean {
+    return !this.isPlayingAny();
   }
 
   // Toggle animation/s

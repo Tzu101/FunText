@@ -22,6 +22,13 @@
           steps: "blue",
           direction: "alternate",
         },
+        {
+          scope: "word",
+          property: "background",
+          duration: 2,
+          steps: "red",
+          direction: "alternate",
+        },
       ];
 
       const options = {
@@ -40,6 +47,7 @@
 
       document.addEventListener("click", () => {
         funtext.toggle({ property: "color", scope: "letter" });
+        console.log(funtext.isPlayingAny(), funtext.isPlayingAll());
       });
 
       /*const container2 = document.getElementById("container2");

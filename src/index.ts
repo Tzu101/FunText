@@ -810,7 +810,11 @@ class FunTextBuilder {
   ): HTMLElement[] {
     const root: FunTextElement = {
       tag: options.tags.text,
-      classes: [FunTextBuilder.ROOT_CLASS, FunTextBuilder.TEXT_CLASS],
+      classes: [
+        FunTextBuilder.ROOT_CLASS,
+        FunTextBuilder.CONTAINER_CLASS,
+        FunTextBuilder.TEXT_CLASS,
+      ],
       children: options.text ?? "",
       variables: [],
     };

@@ -1239,7 +1239,7 @@ export class FunText {
   private html: HTMLElement[];
   private style: HTMLStyleElement;
   private shadowRoot: ShadowRoot | null;
-  isMounted = false;
+  _isMounted = false;
 
   constructor(
     container: HTMLElement,
@@ -1277,11 +1277,11 @@ export class FunText {
       return;
     }
 
-    if (this.isMounted) {
+    if (this._isMounted) {
       return this;
     }
 
-    this.isMounted = true;
+    this._isMounted = true;
 
     this.shadowRoot.innerHTML = "";
 
@@ -1299,11 +1299,11 @@ export class FunText {
       return;
     }
 
-    if (!this.isMounted) {
+    if (!this._isMounted) {
       return this;
     }
 
-    this.isMounted = false;
+    this._isMounted = false;
 
     this.shadowRoot.innerHTML = "";
     this.shadowRoot.appendChild(document.createElement("slot"));
@@ -1316,7 +1316,7 @@ export class FunText {
     this.html = FunTextBuilder.buildHtml(this._options, this._animations);
     this.style = FunTextBuilder.buildStyle(this._options, this._animations);
 
-    if (this.isMounted) {
+    if (this._isMounted) {
       this.unmount();
       this.mount();
     }
@@ -1328,10 +1328,18 @@ export class FunText {
     const newShadow = this.getShadowRoot(container, this._options);
 
     if (newShadow) {
-      this._container = container;
+      if (this._options.text === this._container.textContent) {
+        this._options.text = container.textContent ?? undefined;
+      } else {
+        this._options.text =
+          this._options.text ?? container.textContent ?? undefined;
+      }
 
-      const wasMounted = this.isMounted;
-      if (this.isMounted) {
+      this._container = container;
+      this.html = FunTextBuilder.buildHtml(this._options, this._animations);
+
+      const wasMounted = this._isMounted;
+      if (this._isMounted) {
         this.unmount();
       }
 
@@ -1383,6 +1391,10 @@ export class FunText {
   }
 
   // Get info
+  get isMounted() {
+    return this._isMounted;
+  }
+
   private getShadowRoot(
     container: HTMLElement,
     options: Options,

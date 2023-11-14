@@ -7,7 +7,8 @@
     <title>FunText Test</title>
   </head>
   <body>
-    <div id="funtext">Hello</div>
+    <div id="funtext1">Hello</div>
+    <div id="funtext2">World</div>
     <!--
     -->
 
@@ -31,19 +32,12 @@
         },
       };
 
-      const options2 = {
-        css: {
-          text: "text-decoration: underline;",
-        },
-        defaults: {
-          iteration: "infinite",
-        },
-      };
-
-      const container = document.getElementById("funtext");
-      const funtext = new FunText(container, animations, options);
+      const container1 = document.getElementById("funtext1");
+      const container2 = document.getElementById("funtext2");
+      const funtext = new FunText(container1, animations, options);
       funtext.mount();
-      funtext.options = options2;
+
+      funtext.container = container2;
 
       /*const container2 = document.getElementById("container2");
       const funtext2 = new FunText(

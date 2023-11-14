@@ -108,7 +108,7 @@ class FunTextCompiler {
 
   static compileOptions(
     inputOptions: InputOptions | undefined,
-    containerText: string,
+    containerText: string | undefined,
   ): Options {
     const options = FunTextCompiler.mergeOptions(inputOptions);
 
@@ -1277,6 +1277,10 @@ export class FunText {
       return;
     }
 
+    if (this.isMounted) {
+      return this;
+    }
+
     this.isMounted = true;
 
     this.shadowRoot.innerHTML = "";
@@ -1293,6 +1297,10 @@ export class FunText {
     if (!this.shadowRoot) {
       console.warn("Shadow root not available");
       return;
+    }
+
+    if (!this.isMounted) {
+      return this;
     }
 
     this.isMounted = false;
@@ -1345,7 +1353,7 @@ export class FunText {
   setOptions(options: InputOptions) {
     this._options = FunTextCompiler.compileOptions(
       options,
-      this._container.innerText,
+      this._container.textContent ?? undefined,
     );
     this._animations = FunTextCompiler.compileAnimations(
       this.inputAnimations,

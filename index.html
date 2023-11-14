@@ -11,29 +11,8 @@
     <!--
     -->
 
-    <style>
-      body {
-        background: black;
-      }
-    </style>
-
     <script src="/lib/index.min.js"></script>
     <script>
-      FunText.options = {
-        css: {
-          container: "background: white; color: black; font-size: 2rem;",
-          dark: {
-            container: "background: black; color: white;",
-          },
-          300: {
-            container: "font-size: 1rem;",
-          },
-          600: {
-            container: "font-size: 1.5rem;",
-          },
-        },
-      };
-
       const animations = [
         {
           scope: {
@@ -52,9 +31,19 @@
         },
       };
 
+      const options2 = {
+        css: {
+          text: "text-decoration: underline;",
+        },
+        defaults: {
+          iteration: "infinite",
+        },
+      };
+
       const container = document.getElementById("funtext");
-      const funtext = new FunText(container, [], options);
+      const funtext = new FunText(container, animations, options);
       funtext.mount();
+      funtext.options = options2;
 
       /*const container2 = document.getElementById("container2");
       const funtext2 = new FunText(

@@ -4,16 +4,6 @@
 
 import { FunText } from "../index";
 
-/*beforeAll(() => {
-  const element1 = document.createElement("div");
-  element1.setAttribute("id", "funtext1");
-  document.body.appendChild(element1);
-
-  const element2 = document.createElement("div");
-  element2.setAttribute("id", "funtext2");
-  document.body.appendChild(element2);
-});*/
-
 test("scope", () => {
   const funtext_letters = new FunText(
     document.createElement("div"),
@@ -31,7 +21,9 @@ test("scope", () => {
     },
   );
   funtext_letters.mount();
-  expect(funtext_letters.container.children.length).toBe("letters".length);
+
+  const letters_root = funtext_letters.container.shadowRoot?.children[0];
+  expect(letters_root?.children.length).toBe("letters".length);
 
   const funtext_words = new FunText(
     document.createElement("div"),
@@ -49,23 +41,44 @@ test("scope", () => {
     },
   );
   funtext_words.mount();
-  expect(funtext_words.container.children.length).toBe(2);
+
+  const words_root = funtext_words.container.shadowRoot?.children[0];
+  expect(words_root?.children.length).toBe(3);
 
   const funtext_custom = new FunText(
     document.createElement("div"),
     [
       {
-        scope: "word",
-        property: "",
+        scope: {
+          priority: 1,
+          split: "A",
+        },
+        property: "a",
+        steps: "",
+        duration: 1,
+      },
+      {
+        scope: {
+          priority: 3,
+          split: "B",
+        },
+        property: "b",
         steps: "",
         duration: 1,
       },
     ],
     {
-      text: "word1 word2",
+      text: "CBCACBC",
       openMode: true,
     },
   );
-  funtext_words.mount();
-  expect(funtext_words.container.children.length).toBe(2);
+  funtext_custom.mount();
+
+  const custom_root = funtext_custom.container.shadowRoot?.children[0];
+  expect(custom_root?.children.length).toBe(3);
+  expect(custom_root?.children[0].children.length).toBe(3);
+});
+
+test("sync", () => {
+  expect(true).toBeTruthy();
 });

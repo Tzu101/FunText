@@ -1317,6 +1317,14 @@ export class FunText {
     return this._container;
   }
 
+  get animations() {
+    return this.inputAnimations;
+  }
+
+  get options() {
+    return this._options;
+  }
+
   // Change parameters
   rebuild() {
     this.html = FunTextBuilder.buildHtml(this._options, this._animations);
@@ -1360,6 +1368,7 @@ export class FunText {
     return this;
   }
 
+  // eslint-disable-next-line @typescript-eslint/adjacent-overload-signatures
   set container(container: HTMLElement) {
     this.setContainer(container);
   }
@@ -1378,6 +1387,7 @@ export class FunText {
     return this;
   }
 
+  // eslint-disable-next-line @typescript-eslint/adjacent-overload-signatures
   set options(options: InputOptions) {
     this.setOptions(options);
   }
@@ -1392,6 +1402,7 @@ export class FunText {
     return this;
   }
 
+  // eslint-disable-next-line @typescript-eslint/adjacent-overload-signatures
   set animations(animations: InputAnimation[]) {
     this.setAnimations(animations);
   }

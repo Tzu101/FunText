@@ -23,10 +23,23 @@
     <script src="/lib/index.min.js"></script>
     <script>
       const test_container = document.getElementById("test");
-      const test_animations = [];
-      const test_options = {};
+      const test_animations = [
+        {
+          scope: "letter",
+          property: "color",
+          steps: "yellow",
+          duration: 1,
+          iteration: "infinite",
+        },
+      ];
+      const test_options = {
+        openMode: true,
+      };
 
       const test = new FunText(test_container, test_animations, test_options);
+      test.mount();
+
+      console.log(test.container.shadowRoot.children[0].children.length);
 
       const animations = [
         {

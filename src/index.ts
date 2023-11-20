@@ -1312,6 +1312,11 @@ export class FunText {
     return this;
   }
 
+  // Get parameters
+  get container() {
+    return this._container;
+  }
+
   // Change parameters
   rebuild() {
     this.html = FunTextBuilder.buildHtml(this._options, this._animations);
@@ -1601,5 +1606,9 @@ export class FunText {
 
 // Additional library exports
 export type { InputOptions, InputAnimation, AnimationId };
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-(window as any).FunText = FunText;
+
+// Export for browser
+if (window) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (window as any).FunText = FunText;
+}

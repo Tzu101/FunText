@@ -9,11 +9,25 @@
   <body>
     <div id="funtext1">Hello</div>
     <div id="funtext2">World</div>
+
+    <br />
+    <br />
+    <br />
+    <br />
+    <br />
+    <br />
+    <div id="test">Test</div>
     <!--
     -->
 
     <script src="/lib/index.min.js"></script>
     <script>
+      const test_container = document.getElementById("test");
+      const test_animations = [];
+      const test_options = {};
+
+      const test = new FunText(test_container, test_animations, test_options);
+
       const animations = [
         {
           scope: "letter",
@@ -41,7 +55,6 @@
       };
 
       const container1 = document.getElementById("funtext1");
-      const container2 = document.getElementById("funtext2");
       const funtext = new FunText(container1, animations, options);
       funtext.mount();
 
@@ -50,7 +63,7 @@
         console.log(funtext.isPlayingAny(), funtext.isPlayingAll());
       });
 
-      /*const container2 = document.getElementById("container2");
+      const container2 = document.getElementById("funtext2");
       const funtext2 = new FunText(
         container2,
         [
@@ -110,7 +123,7 @@
           text: "Hello world.\nWhat a wonderfull day!",
         },
       );
-      funtext2.mount();*/
+      funtext2.mount();
     </script>
   </body>
 </html>

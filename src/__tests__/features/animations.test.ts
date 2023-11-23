@@ -2,7 +2,7 @@
  * @jest-environment jsdom
  */
 
-import { FunText } from "../index";
+import { FunText } from "../../index";
 
 test("scope", () => {
   const funtext_letters = new FunText(
@@ -79,6 +79,48 @@ test("scope", () => {
   expect(custom_root?.children[0].children.length).toBe(3);
 });
 
-test("sync", () => {
+test("sync", async () => {
+  /*let startTime = -1;
+  let endTime = -1;
+
+  const container = document.createElement("div");
+  document.body.appendChild(container);
+
+  const funtext_sync = new FunText(
+    container,
+    [
+      {
+        scope: "letter",
+        property: "",
+        steps: "",
+        duration: 1,
+        sync: {
+          location: 0,
+          duration: 3,
+        },
+        onStart: (event) => {
+          startTime = event.elapsedTime;
+        },
+        onEnd: (event) => {
+          endTime = event.elapsedTime;
+        },
+      },
+    ],
+    {
+      text: "letters",
+      openMode: true,
+    },
+  );
+  funtext_sync.mount();
+
+  function delay(ms: number) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+  await delay(4000);
+
+  expect(startTime).toBeCloseTo(0);
+  expect(endTime).toBeCloseTo(3);*/
+
+  // Animations dont start in test enviorment
   expect(true).toBeTruthy();
-});
+}, 30000);

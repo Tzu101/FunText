@@ -36,10 +36,28 @@
         openMode: true,
       };
 
-      const test = new FunText(test_container, test_animations, test_options);
-      test.mount();
+      /*const test = new FunText(test_container, test_animations, test_options);
+      test.mount();*/
 
-      console.log(test.container.shadowRoot.children[0].children.length);
+      const original_text = "ORIGINAL";
+      const animated_text = "ANIMATED";
+      const changed_text = "CHANGED";
+
+      const element = document.createElement("div");
+      element.setAttribute("id", "someid");
+      element.innerText = original_text;
+      document.body.appendChild(element);
+
+      const funtext1 = new FunText(element, [], {
+        text: animated_text,
+        openMode: true,
+      });
+      funtext1.unmount();
+
+      funtext1.options = {
+        text: changed_text,
+        openMode: true,
+      };
 
       const animations = [
         {

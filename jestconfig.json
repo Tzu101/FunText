@@ -3,9 +3,5 @@
     "^.+\\.(t|j)sx?$": "ts-jest"
   },
   "testRegex": "(/__tests__/.*|(\\.|/)(test|spec))\\.(jsx?|tsx?)$",
-  "moduleFileExtensions": ["ts", "tsx", "js", "jsx", "json", "node"],
-  "modulePathIgnorePatterns": [
-    "src/__tests__/performance",
-    "src/__tests__/features"
-  ]
+  "moduleFileExtensions": ["ts", "tsx", "js", "jsx", "json", "node"]
 }

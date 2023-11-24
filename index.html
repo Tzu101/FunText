@@ -7,94 +7,96 @@
     <title>FunText Test</title>
   </head>
   <body>
-    <div id="funtext1">Hello</div>
-    <div id="funtext2">World</div>
-
-    <br />
-    <br />
-    <br />
-    <br />
-    <br />
-    <br />
-    <div id="test">Test</div>
+    <div id="funtext">Hello world, what a wonderfull day!</div>
     <!--
     -->
 
     <script src="/lib/index.min.js"></script>
     <script>
-      const test_container = document.getElementById("test");
-      const test_animations = [
-        {
-          scope: "letter",
-          property: "color",
-          steps: "yellow",
-          duration: 1,
-          iteration: "infinite",
-        },
-      ];
-      const test_options = {
-        openMode: true,
-      };
+      function generateRandomBinaryString(length) {
+        let binaryString = "";
+        for (let i = 0; i < length; i++) {
+          const randomBit = Math.random() < 0.5 ? "0" : "1";
+          binaryString += randomBit;
+        }
+        return binaryString;
+      }
 
-      /*const test = new FunText(test_container, test_animations, test_options);
-      test.mount();*/
-
-      const original_text = "ORIGINAL";
-      const animated_text = "ANIMATED";
-      const changed_text = "CHANGED";
-
-      const element = document.createElement("div");
-      element.setAttribute("id", "someid");
-      element.innerText = original_text;
-      document.body.appendChild(element);
-
-      const funtext1 = new FunText(element, [], {
-        text: animated_text,
-        openMode: true,
-      });
-      funtext1.unmount();
-
-      funtext1.options = {
-        text: changed_text,
-        openMode: true,
-      };
-
+      const container = document.getElementById("funtext");
       const animations = [
         {
           scope: "letter",
           property: "color",
           duration: 2,
-          steps: "blue",
-          direction: "alternate",
+          steps: "lime",
+          fill: "forwards",
+          sync: {
+            location: 0,
+            duration: 5,
+          },
         },
         {
-          scope: "word",
-          property: "background",
-          duration: 2,
-          steps: "red",
-          direction: "alternate",
+          scope: "letter",
+          type: "transform",
+          animations: [
+            {
+              property: "translateY",
+              duration: 3.5,
+              delay: 1.5,
+              unit: "px",
+              steps: "-25",
+            },
+            {
+              property: "translateX",
+              duration: 2,
+              delay: 1.75,
+              unit: "px",
+              steps: "-6",
+            },
+          ],
+          fill: "forwards",
+          offset: 0.1,
+          delay: 0,
+        },
+        {
+          scope: "letter",
+          type: "filter",
+          animations: [
+            {
+              property: "opacity",
+              duration: 5,
+              unit: "",
+              steps: "0",
+            },
+            {
+              property: "blur",
+              duration: 5,
+              unit: "px",
+              steps: "10",
+            },
+          ],
+          fill: "forwards",
+          offset: 0.1,
+          delay: 0,
         },
       ];
+      const options = {};
 
-      const options = {
-        defaults: {
-          iteration: "infinite",
-        },
-        css: {
-          text: "font-size: 3rem;",
-        },
-      };
-
-      const container1 = document.getElementById("funtext1");
-      const funtext = new FunText(container1, animations, options);
+      const funtext = new FunText(container, animations, options);
       funtext.mount();
 
-      document.addEventListener("click", () => {
-        funtext.toggle({ property: "color", scope: "letter" });
-        console.log(funtext.isPlayingAny(), funtext.isPlayingAll());
-      });
+      const iterations = 1000;
 
-      const container2 = document.getElementById("funtext2");
+      const startTime = performance.now();
+      for (let i = 0; i < iterations; i++) {
+        funtext.resetAll();
+      }
+      const endTime = performance.now();
+
+      console.log(`Total: ${endTime - startTime}ms`);
+      console.log(`Iteration: ${(endTime - startTime) / iterations}ms`);
+
+      /*const container2 = document.getElementById("funtext2");
       const funtext2 = new FunText(
         container2,
         [
@@ -154,7 +156,7 @@
           text: "Hello world.\nWhat a wonderfull day!",
         },
       );
-      funtext2.mount();
+      funtext2.mount();*/
     </script>
   </body>
 </html>

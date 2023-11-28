@@ -6,7 +6,7 @@ FunText is a lightweight and versatile npm library designed for text animation.
 
 ## Installation
 
-In a browser:
+Import inbrowser:
 
 ```html
 // unpkg
@@ -16,7 +16,7 @@ In a browser:
 <script src="https://cdn.jsdelivr.net/npm/funtext"></script>
 ```
 
-Using bun:
+Package manager:
 
 ```shell
 # NPM

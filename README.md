@@ -6,7 +6,7 @@ FunText is a lightweight and versatile npm library designed for text animation.
 
 ## Installation
 
-Import inbrowser:
+Import in browser:
 
 ```html
 // unpkg

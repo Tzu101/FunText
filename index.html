@@ -7,156 +7,102 @@
     <title>FunText Test</title>
   </head>
   <body>
-    <div id="funtext">Hello world, what a wonderfull day!</div>
-    <!--
-    -->
-
+    <script src="https://unpkg.com/gsap@3.9.0/dist/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/velocity/1.2.3/velocity.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
     <script src="/lib/index.min.js"></script>
-    <script>
-      function generateRandomBinaryString(length) {
-        let binaryString = "";
-        for (let i = 0; i < length; i++) {
-          const randomBit = Math.random() < 0.5 ? "0" : "1";
-          binaryString += randomBit;
-        }
-        return binaryString;
-      }
 
+    <div id="gsap">GSAP: Test</div>
+    <script>
+      gsap.to("#gsap", { opacity: 0, duration: 3 });
+    </script>
+
+    <div id="velocity">Velocity: Test</div>
+    <script>
+      Velocity(
+        document.querySelector("#velocity"),
+        { opacity: 0 },
+        { duration: 3000 },
+      );
+    </script>
+
+    <div id="anime">Anime: Test</div>
+    <script>
+      anime({
+        targets: "#anime",
+        opacity: 0,
+        duration: 30000,
+      });
+    </script>
+
+    <div id="funtext">FunText: Test</div>
+    <script>
       const container = document.getElementById("funtext");
       const animations = [
         {
-          scope: "letter",
-          property: "color",
-          duration: 2,
-          steps: "lime",
-          fill: "forwards",
-          sync: {
-            location: 0,
-            duration: 5,
-          },
-        },
-        {
-          scope: "letter",
-          type: "transform",
-          animations: [
-            {
-              property: "translateY",
-              duration: 3.5,
-              delay: 1.5,
-              unit: "px",
-              steps: "-25",
-            },
-            {
-              property: "translateX",
-              duration: 2,
-              delay: 1.75,
-              unit: "px",
-              steps: "-6",
-            },
-          ],
-          fill: "forwards",
-          offset: 0.1,
-          delay: 0,
-        },
-        {
-          scope: "letter",
-          type: "filter",
-          animations: [
-            {
-              property: "opacity",
-              duration: 5,
-              unit: "",
-              steps: "0",
-            },
-            {
-              property: "blur",
-              duration: 5,
-              unit: "px",
-              steps: "10",
-            },
-          ],
-          fill: "forwards",
-          offset: 0.1,
-          delay: 0,
+          scope: "all",
+          property: "opacity",
+          duration: 3,
+          steps: "0",
+          iteration: "infinite",
         },
       ];
+
       const options = {};
 
       const funtext = new FunText(container, animations, options);
       funtext.mount();
-
-      const iterations = 1000;
-
-      const startTime = performance.now();
-      for (let i = 0; i < iterations; i++) {
-        funtext.resetAll();
-      }
-      const endTime = performance.now();
-
-      console.log(`Total: ${endTime - startTime}ms`);
-      console.log(`Iteration: ${(endTime - startTime) / iterations}ms`);
-
-      /*const container2 = document.getElementById("funtext2");
-      const funtext2 = new FunText(
-        container2,
-        [
-          {
-            scope: "letter",
-            property: "color",
-            duration: 2,
-            steps: "white",
-            fill: "forwards",
-            sync: {
-              location: 0,
-              duration: 5,
-            },
-            iteration: "infinite",
-          },
-          {
-            scope: "letter",
-            type: "transform",
-            animations: [
-              {
-                property: "translateY",
-                duration: 3.5,
-                delay: 1.5,
-                unit: "px",
-                steps: "-25",
-              },
-            ],
-            iteration: "infinite",
-            fill: "forwards",
-            offset: 0.1,
-            delay: 0,
-          },
-          {
-            scope: "letter",
-            type: "filter",
-            animations: [
-              {
-                property: "opacity",
-                duration: 5,
-                unit: "",
-                steps: "0",
-              },
-              {
-                property: "blur",
-                duration: 5,
-                unit: "px",
-                steps: "10",
-              },
-            ],
-            iteration: "infinite",
-            fill: "forwards",
-            offset: 0.1,
-            delay: 0,
-          },
-        ],
-        {
-          text: "Hello world.\nWhat a wonderfull day!",
-        },
-      );
-      funtext2.mount();*/
     </script>
+
+    <!--
+    \begin{figure}[H]
+      \begin{verbatim}
+      <div id="funtext">
+          <div aria-hidden="true">
+          <div>
+              <p>H</p>
+              <p>e</p>
+              <p>l</p>
+              <p>l</p>
+              <p>o</p>
+          </div>
+          <div>
+              <p> </p>
+          </div>
+          <div>
+              <p>w</p>
+              <p>o</p>
+              <p>r</p>
+              <p>l</p>
+              <p>d</p>
+          </div>
+          </div>
+          <p aria-label="Hello world"></p>
+          <style>...</style>
+      </div>
+
+      <script>
+          const container = document.getElementById("funtext");
+          const animations = [
+              {
+              scope: "word",
+              property: "color",
+              steps: "red",
+              duration: 5,
+              },
+              {
+              scope: "letter",
+              property: "background",
+              steps: "blue",
+              duration: 5,
+              },
+          ];
+
+          const funtext = new FunText(container, animations);
+      </script>
+      \end{verbatim}
+      \caption{primer DOM strukture}
+    \end{figure}
+    -->
   </body>
 </html>

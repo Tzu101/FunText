@@ -1,4 +1,4 @@
-import { cloneDeep } from "lodash";
+import cloneDeep from "lodash/cloneDeep";
 import type {
   Options,
   InputOptions,
@@ -127,18 +127,21 @@ class FunTextCompiler {
   private static readonly SCOPE_SPLIT = {
     word: FunTextCompiler.DEFAULT_SPLIT,
     letter: "",
+    all: /^(?=.)/,
   };
 
   private static readonly DEFAULT_PRIORITY = 1;
   static readonly SCOPE_PRIORITY = {
     word: FunTextCompiler.DEFAULT_PRIORITY,
     letter: 3,
+    all: -10000,
   };
 
   // UTILITY
   private static compileScope(
-    scope: "word" | "letter" | InputScope,
+    scope?: "word" | "letter" | InputScope,
   ): FinalScope {
+    scope = scope ?? "letter";
     if (typeof scope === "string") {
       return {
         split: FunTextCompiler.SCOPE_SPLIT[scope],
@@ -345,7 +348,7 @@ class FunTextCompiler {
     const compiledSteps: AnimationSteps[] = [];
     const compiledAnimations: (TransformAnimation | FilterAnimation)[] = [];
 
-    for (const animation of animations.animations) {
+    for (const animation of animations.properties) {
       if (uniqueAnimations.has(animation.property)) {
         continue;
       } else {
@@ -1247,7 +1250,6 @@ export class FunText {
     animations: InputAnimation[],
     options?: InputOptions,
   ) {
-    // TODO: Check if this preserves functions
     this.inputAnimations = cloneDeep(animations);
 
     this._container = container;

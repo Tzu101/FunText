@@ -81,7 +81,7 @@ export interface InputAnimationSync {
 export type AnimationCallback = (event: AnimationEvent) => void;
 
 interface AnimationProperties {
-  scope: InputScope;
+  scope?: InputScope;
 
   delay?: number;
   iteration?: number | `${number}` | "infinite";
@@ -127,14 +127,14 @@ export interface TransformAnimation {
     | "scewX"
     | "scewY";
   steps: InputAnimationSteps;
-  unit: string;
+  unit?: string;
 
   duration: number;
   delay?: number;
 }
 export type TransformAnimations = {
   type: "transform";
-  animations: TransformAnimation[];
+  properties: TransformAnimation[];
 } & AnimationProperties;
 
 export interface FilterAnimation {
@@ -149,14 +149,14 @@ export interface FilterAnimation {
     | "saturate"
     | "sepia";
   steps: InputAnimationSteps;
-  unit: string;
+  unit?: string;
 
   duration: number;
   delay?: number;
 }
 export type FilterAnimations = {
   type: "filter";
-  animations: FilterAnimation[];
+  properties: FilterAnimation[];
 } & AnimationProperties;
 
 export type InputAnimation =
